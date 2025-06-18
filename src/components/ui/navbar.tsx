@@ -130,7 +130,7 @@ export function Navbar() {
         {/* Mobile menu overlay */}
         <div
           className={cn(
-            "md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300 z-40",
+            "md:hidden fixed inset-0 bg-black/60 transition-all duration-300 z-40",
             isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
           )}
           onClick={() => setIsMobileMenuOpen(false)}
@@ -139,7 +139,7 @@ export function Navbar() {
         {/* Mobile menu */}
         <div
           className={cn(
-            "md:hidden fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white/95 backdrop-blur-md shadow-2xl border-l border-slate-200/50 transform transition-all duration-300 ease-out z-50",
+            "md:hidden fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl border-l border-slate-200 transform transition-all duration-300 ease-out z-50",
             isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
           )}
         >
