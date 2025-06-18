@@ -231,7 +231,7 @@ export default function HomePage() {
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative h-[85vh] md:h-[95vh] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[75vh] md:h-[95vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-950 via-blue-900 to-slate-800 z-10" />
         <div className="absolute inset-0 bg-gradient-to-tl from-blue-800/30 via-transparent to-slate-700/40 z-12" />
         <div className="absolute inset-0 bg-[url('/hero-bg.jpg')] bg-cover bg-center" />
@@ -240,13 +240,13 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(square_at_4px_4px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[length:16px_16px] z-17" />
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900/60 via-slate-800/50 to-slate-900/70 z-20" />
         <div className="absolute inset-0 bg-gradient-to-tl from-blue-950/20 via-transparent to-slate-900/30 z-25" />
-        <div className="container relative z-30 text-center px-6 py-6 md:py-12 rounded-2xl shadow-2xl mx-4 md:mx-8">
+        <div className="container relative z-30 text-center px-6 py-8 md:py-16 rounded-2xl shadow-2xl mx-4 md:mx-8">
           <BlurText
             text={t.hero.title}
             className="text-3xl md:text-5xl font-bold text-white mb-4"
             highlightWord={language === "en" ? "Vision" : "Viziunea"}
           />
-          <p className="text-lg md:text-xl text-slate-200 mb-6 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-slate-200 mb-8 max-w-2xl mx-auto">
             {t.hero.subtitle}
           </p>
           <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
@@ -254,12 +254,12 @@ export default function HomePage() {
           </Button>
         </div>
       </section>
-
+      
       {/* Stats Section */}
-      <section className="py-12 bg-gradient-to-br from-amber-500 via-amber-400 to-yellow-300 relative">
+      <section className="py-6 md:py-12 bg-gradient-to-br from-amber-500 via-amber-400 to-yellow-300 relative">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-10"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"></div>
-        <div className="container mx-auto px-6 md:px-8 relative">
+        <div className="container mx-auto px-2 md:px-8 relative">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
               { icon: Clock, number: 10, suffix: "+", label: t.stats.yearsExperience },
@@ -267,18 +267,18 @@ export default function HomePage() {
               { icon: Users, number: 150, suffix: "+", label: t.stats.clientSatisfaction },
               { icon: Award, number: 25, suffix: "+", label: t.stats.awardsWon }
             ].map((stat, index) => (
-              <div key={index} className="text-center group">
-                <div className="flex justify-center mb-4">
-                  <div className="p-5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 group-hover:bg-white/30 transition-all duration-300">
-                    <stat.icon className="h-8 w-8 text-white" />
+              <div key={index} className="text-center group flex flex-col items-center">
+                <div className="flex justify-center mb-3 md:mb-4 -ml-1">
+                  <div className="p-3 md:p-5 bg-white/20 backdrop-blur-sm rounded-full border border-white/30 group-hover:bg-white/30 transition-all duration-300">
+                    <stat.icon className="h-6 w-6 md:h-8 md:w-8 text-white" />
                   </div>
                 </div>
                 <AnimatedStat
                   value={stat.number}
                   suffix={stat.suffix}
-                  className="text-3xl font-bold text-white mb-1 drop-shadow-sm"
+                  className="text-xl font-bold text-white drop-shadow-sm mb-1"
                 />
-                <p className="text-white/90 font-medium text-sm">{stat.label}</p>
+                <p className="text-white/90 font-medium text-sm text-center">{stat.label}</p>
               </div>
             ))}
           </div>
