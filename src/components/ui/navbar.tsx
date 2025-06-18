@@ -42,7 +42,7 @@ export function Navbar() {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        isScrolled
+        isScrolled || isMobileMenuOpen
           ? "bg-white/95 backdrop-blur-md shadow-lg border-b border-slate-200/50"
           : "bg-transparent"
       )}
@@ -139,13 +139,13 @@ export function Navbar() {
         {/* Mobile menu */}
         <div
           className={cn(
-            "md:hidden fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl border-l border-slate-200 transform transition-all duration-300 ease-out z-50",
+            "md:hidden fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-slate-50 shadow-2xl border-l border-slate-200 transform transition-all duration-300 ease-out z-50",
             isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
           )}
         >
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full bg-slate-50">
             {/* Mobile menu header */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-200/50">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200/50 bg-slate-50">
               <span className="text-xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
                 Menu
               </span>
@@ -158,7 +158,7 @@ export function Navbar() {
             </div>
 
             {/* Mobile menu content */}
-            <div className="flex-1 px-6 py-8">
+            <div className="flex-1 px-6 py-8 bg-slate-50">
               {/* Navigation Links */}
               <div className="space-y-2">
                 <Link
@@ -211,7 +211,7 @@ export function Navbar() {
             </div>
 
             {/* Mobile menu footer */}
-            <div className="p-6 border-t border-slate-200/50">
+            <div className="p-6 border-t border-slate-200/50 bg-slate-50">
               <p className="text-sm text-slate-500 text-center">
                 ADM Instal © 2024
               </p>
