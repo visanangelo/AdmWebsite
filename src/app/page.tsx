@@ -231,7 +231,7 @@ export default function HomePage() {
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative h-[65vh] md:h-[95vh] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[85vh] md:h-[95vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-950 via-blue-900 to-slate-800 z-10" />
         <div className="absolute inset-0 bg-gradient-to-tl from-blue-800/30 via-transparent to-slate-700/40 z-12" />
         <div className="absolute inset-0 bg-[url('/hero-bg.jpg')] bg-cover bg-center" />
