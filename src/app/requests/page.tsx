@@ -8,8 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useNotify } from '@/hooks/useNotify';
 import { Calendar, MapPin, Wrench, Clock, CheckCircle, AlertCircle } from "lucide-react";
-import { Suspense } from "react"
-import { Metadata } from "next"
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
