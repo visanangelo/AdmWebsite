@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Menu, X, Phone, Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -19,6 +21,7 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { t, language, setLanguage } = useLanguage()
+  const router = useRouter()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,6 +40,11 @@ export function Navbar() {
       document.body.style.overflow = 'unset'
     }
   }, [isMobileMenuOpen])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
 
   return (
     <header
@@ -97,6 +105,14 @@ export function Navbar() {
             >
               <Phone className="h-4 w-4 mr-2" />
               Contact Us
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-2"
+              onClick={handleLogout}
+            >
+              Log Out
             </Button>
           </div>
 
@@ -206,6 +222,21 @@ export function Navbar() {
                 >
                   <Phone className="h-5 w-5 mr-2" />
                   Contact Us
+                </Button>
+              </div>
+
+              {/* Logout Button for Mobile */}
+              <div className="mt-8">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full rounded-xl py-4 text-lg font-medium"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false)
+                    handleLogout()
+                  }}
+                >
+                  Log Out
                 </Button>
               </div>
             </div>

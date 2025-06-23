@@ -1,4 +1,5 @@
 {
   "css.validate": false,
-  "tailwindCSS.validate": true
+  "tailwindCSS.validate": true,
+  "deno.enable": true
 } 

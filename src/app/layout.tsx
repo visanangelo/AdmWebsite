@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import React from "react";
-import { ClientLayout } from "../components/ui/client-layout";
+import { ClientLayout } from "../components/ui/client-layout"
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ADM Instal",
-  description: "Professional construction services",
+  title: "ADM Instal - Equipment Rental Management",
+  description: "Professional equipment rental management system",
 };
 
 export default function RootLayout({
