@@ -1,8 +1,10 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { getSupabaseClient } from "@/lib/supabaseClient"
+import { useRouter } from "next/navigation"
 import type React from "react"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -48,6 +50,9 @@ import { useLanguage } from '@/contexts/language-context'
 import BlurText from "@/components/ui/blur-text"
 import { translations } from "@/config/languages"
 import { motion } from "framer-motion"
+
+// Force dynamic rendering to prevent build-time errors
+export const dynamic = 'force-dynamic'
 
 export default function HomePage() {
   const { language, setLanguage } = useLanguage();

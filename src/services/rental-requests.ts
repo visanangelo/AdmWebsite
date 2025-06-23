@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient'
+import { getSupabaseClient } from '@/lib/supabaseClient'
 import { RentalRequest, RentalRequestFilters, CreateRequestData } from '@/types/rental'
 import { validateRequiredFields, validateDateRange } from '@/lib/validation'
 
@@ -51,7 +51,7 @@ class RentalRequestService {
         return { data: requestsCache, total: requestsCache.length, error: undefined }
       }
 
-      let query = supabase
+      let query = getSupabaseClient()
         .from("rental_requests")
         .select("id, user_id, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status)", { count: 'exact' })
 
@@ -127,7 +127,7 @@ class RentalRequestService {
         return { data: fleetCache }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from("fleet")
         .select("*")
         .order("name")
@@ -161,11 +161,11 @@ class RentalRequestService {
       const today = new Date().toISOString().slice(0, 10)
 
       // Get all requests and fleet for calculations
-      const { data: requests } = await supabase
+      const { data: requests } = await getSupabaseClient()
         .from("rental_requests")
         .select("*")
 
-      const { data: fleet } = await supabase
+      const { data: fleet } = await getSupabaseClient()
         .from("fleet")
         .select("*")
 
@@ -207,7 +207,7 @@ class RentalRequestService {
   }
 
   static async approveRequest(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("rental_requests")
       .update({ status: "Approved" })
       .eq("id", id)
@@ -220,7 +220,7 @@ class RentalRequestService {
   }
 
   static async declineRequest(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("rental_requests")
       .update({ status: "Declined" })
       .eq("id", id)
@@ -232,7 +232,7 @@ class RentalRequestService {
   }
 
   static async deleteRequest(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("rental_requests")
       .delete()
       .eq("id", id)
@@ -244,7 +244,7 @@ class RentalRequestService {
   }
 
   static async completeRequest(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("rental_requests")
       .update({ status: "Completed" })
       .eq("id", id)
@@ -256,7 +256,7 @@ class RentalRequestService {
   }
 
   static async cancelRequest(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("rental_requests")
       .update({ status: "Cancelled" })
       .eq("id", id)
@@ -268,7 +268,7 @@ class RentalRequestService {
   }
 
   static async reopenRequest(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("rental_requests")
       .update({ status: "Pending" })
       .eq("id", id)
@@ -280,7 +280,7 @@ class RentalRequestService {
   }
 
   static async updateFleetStatus(id: string, status: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from("fleet")
       .update({ status })
       .eq("id", id)
@@ -293,7 +293,7 @@ class RentalRequestService {
 
   static async createRequest(requestData: CreateRequestData): Promise<{ data: RentalRequest | null; error: string | null }> {
     try {
-      const user = (await supabase.auth.getUser()).data.user;
+      const user = (await getSupabaseClient().auth.getUser()).data.user;
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -309,7 +309,7 @@ class RentalRequestService {
       }
 
       // Check for date conflicts
-      const { data: existingRequests } = await supabase
+      const { data: existingRequests } = await getSupabaseClient()
         .from('rental_requests')
         .select('*')
         .eq('equipment_id', requestData.equipment_id)
@@ -328,7 +328,7 @@ class RentalRequestService {
         throw new Error('This equipment is already reserved for the selected dates');
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('rental_requests')
         .insert([{
           ...requestData,

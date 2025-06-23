@@ -1,13 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import { RentalRequestService } from "@/services/rental-requests";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useNotify } from '@/hooks/useNotify';
 import { Calendar, MapPin, Wrench, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Suspense } from "react"
+import { Metadata } from "next"
+
+// Force dynamic rendering to prevent build-time errors
+export const dynamic = 'force-dynamic'
 
 export default function RequestsPage() {
   const [equipment, setEquipment] = useState("");
@@ -49,7 +54,7 @@ export default function RequestsPage() {
       // Test toast immediately
       notify.info('Starting request submission...');
       
-      const user = (await supabase.auth.getUser()).data.user;
+      const user = (await getSupabaseClient().auth.getUser()).data.user;
       if (!user) {
         notify.error("You must be logged in to submit a request.");
         return;

@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Suspense } from "react"
+import { Metadata } from "next"
+
+// Force dynamic rendering to prevent build-time errors
+export const dynamic = 'force-dynamic'
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,14 +25,14 @@ export default function LoginPage() {
     setError("");
     let result;
     if (isSignUp) {
-      result = await supabase.auth.signUp({ email, password });
+      result = await getSupabaseClient().auth.signUp({ email, password });
     } else {
-      result = await supabase.auth.signInWithPassword({ email, password });
+      result = await getSupabaseClient().auth.signInWithPassword({ email, password });
     }
     if (result.error) setError(result.error.message);
     else {
       // Get user metadata to check for admin
-      const { data } = await supabase.auth.getUser();
+      const { data } = await getSupabaseClient().auth.getUser();
       if (data.user?.user_metadata?.role === "admin") {
         router.push("/dashboard");
       } else {

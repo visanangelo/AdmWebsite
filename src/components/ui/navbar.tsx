@@ -7,7 +7,12 @@ import { Menu, X, Phone, Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
+import { getSupabaseClient } from "@/lib/supabaseClient"
+import { Suspense } from "react"
+import { Metadata } from "next"
+
+// Force dynamic rendering to prevent build-time errors
+export const dynamic = 'force-dynamic'
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -42,7 +47,7 @@ export function Navbar() {
   }, [isMobileMenuOpen])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await getSupabaseClient().auth.signOut()
     router.push("/login")
   }
 
