@@ -2,37 +2,6 @@ import { supabase } from '@/lib/supabaseClient'
 import { RentalRequest, RentalRequestFilters, CreateRequestData } from '@/types/rental'
 import { validateRequiredFields, validateDateRange } from '@/lib/validation'
 
-export interface RentalRequest {
-  id: string
-  user_id: string
-  equipment_id: string
-  start_date: string
-  end_date: string
-  project_location: string
-  notes: string
-  status: string
-  created_at: string
-  equipment?: { name: string; status: string }
-  date?: string
-  requester?: string
-}
-
-export interface RentalRequestFilters {
-  status?: string
-  equipment?: string
-  dateFrom?: string
-  dateTo?: string
-  search?: string
-}
-
-export interface CreateRequestData {
-  equipment_id: string
-  start_date: string
-  end_date: string
-  project_location: string
-  notes?: string
-}
-
 // Cache management with separate timestamps for better performance
 let requestsCache: RentalRequest[] | null = null
 let fleetCache: any[] | null = null
