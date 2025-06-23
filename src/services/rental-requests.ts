@@ -90,13 +90,21 @@ class RentalRequestService {
       }
 
       // Transform data to match expected format
-      const transformedData = (data || []).map(r => {
+      const transformedData: RentalRequest[] = (data || []).map((r: any) => {
         const equipmentData = Array.isArray(r.equipment) ? r.equipment[0] : r.equipment
         return {
-          ...r,
+          id: r.id as string,
+          user_id: r.user_id as string,
+          equipment_id: r.equipment_id as string,
+          start_date: r.start_date as string,
+          end_date: r.end_date as string,
+          project_location: r.project_location as string,
+          notes: r.notes as string,
+          status: r.status as string,
+          created_at: r.created_at as string,
           equipment: equipmentData?.name || 'Unknown',
-          requester: r.user_id,
-          date: r.created_at,
+          requester: r.user_id as string,
+          date: r.created_at as string,
         }
       })
 
@@ -173,10 +181,10 @@ class RentalRequestService {
       const fleetData = fleet || []
 
       // Calculate stats
-      const activeRentals = requestsData.filter(r => 
+      const activeRentals = requestsData.filter((r: any) => 
         r.status === "Approved" && 
-        r.start_date <= today && 
-        r.end_date >= today
+        (r.start_date as string) <= today && 
+        (r.end_date as string) >= today
       ).length
 
       const fleetAvailable = fleetData.filter(f => f.status === "Available").length
@@ -315,9 +323,9 @@ class RentalRequestService {
         .eq('equipment_id', requestData.equipment_id)
         .eq('status', 'Approved');
 
-      const hasConflict = existingRequests?.some(req => {
-        const reqStart = new Date(req.start_date);
-        const reqEnd = new Date(req.end_date);
+      const hasConflict = existingRequests?.some((req: any) => {
+        const reqStart = new Date(req.start_date as string);
+        const reqEnd = new Date(req.end_date as string);
         const newStart = new Date(requestData.start_date);
         const newEnd = new Date(requestData.end_date);
         
@@ -346,7 +354,7 @@ class RentalRequestService {
       // Clear cache to ensure fresh data
       this.clearCache();
 
-      return { data, error: null };
+      return { data: data as unknown as RentalRequest, error: null };
     } catch (error) {
       console.error('Unexpected error creating request:', error);
       return { data: null, error: error instanceof Error ? error.message : 'Failed to create request' };
