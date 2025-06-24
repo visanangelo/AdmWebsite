@@ -27,28 +27,32 @@ const navMain = [
     url: "/dashboard?tab=dashboard",
     icon: LayoutDashboardIcon,
     tab: "dashboard",
+    shortcut: "1"
   },
   {
     title: "Rental Requests",
     url: "/dashboard?tab=requests",
     icon: ClipboardListIcon,
     tab: "requests",
+    shortcut: "2"
   },
   {
     title: "Fleet",
     url: "/dashboard?tab=fleet",
     icon: DatabaseIcon,
     tab: "fleet",
+    shortcut: "3"
   },
   {
     title: "Settings",
     url: "/dashboard?tab=settings",
     icon: SettingsIcon,
     tab: "settings",
+    shortcut: "4"
   },
 ]
 
-export function AppSidebar({ activeTab, role, ...props }: { activeTab?: string, role?: string } & React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ activeTab, role, onTabChange, ...props }: { activeTab?: string, role?: string, onTabChange?: (tab: string) => void } & React.ComponentProps<typeof Sidebar>) {
   // Always show all navMain items
   const filteredNav = navMain;
   return (
@@ -60,10 +64,14 @@ export function AppSidebar({ activeTab, role, ...props }: { activeTab?: string, 
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/dashboard?tab=dashboard">
+              <button
+                type="button"
+                onClick={() => onTabChange && onTabChange('dashboard')}
+                className="flex items-center w-full transition-all duration-200 ease-in-out hover:bg-muted/50 active:scale-95"
+              >
                 <LayoutDashboardIcon className="h-5 w-5" />
                 <span className="text-base font-semibold">Admin Panel</span>
-              </a>
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -73,10 +81,16 @@ export function AppSidebar({ activeTab, role, ...props }: { activeTab?: string, 
           {filteredNav.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild tooltip={item.title} className={activeTab === item.tab ? "bg-primary text-primary-foreground" : undefined}>
-                <a href={item.url} aria-current={activeTab === item.tab ? "page" : undefined}>
+                <button
+                  type="button"
+                  onClick={() => onTabChange && onTabChange(item.tab)}
+                  aria-current={activeTab === item.tab ? "page" : undefined}
+                  className="flex items-center w-full transition-all duration-200 ease-in-out hover:bg-muted/50 active:scale-95"
+                >
                   <item.icon className="h-5 w-5" />
                   <span>{item.title}</span>
-                </a>
+                  <span className="ml-auto text-xs text-muted-foreground opacity-60">{item.shortcut}</span>
+                </button>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
@@ -88,7 +102,6 @@ export function AppSidebar({ activeTab, role, ...props }: { activeTab?: string, 
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 focus:outline-none">
                 <Avatar>
-                  <AvatarImage src="/avatars/shadcn.jpg" alt="User avatar" />
                   <AvatarFallback>AU</AvatarFallback>
                 </Avatar>
                 <span className="font-medium">Admin User</span>
@@ -96,10 +109,10 @@ export function AppSidebar({ activeTab, role, ...props }: { activeTab?: string, 
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem asChild>
-                <a href="/dashboard?tab=profile">Profile</a>
+                <button type="button" onClick={() => onTabChange && onTabChange('profile')} className="w-full text-left transition-colors duration-150 hover:bg-muted/50">Profile</button>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <a href="/dashboard?tab=settings">Settings</a>
+                <button type="button" onClick={() => onTabChange && onTabChange('settings')} className="w-full text-left transition-colors duration-150 hover:bg-muted/50">Settings</button>
               </DropdownMenuItem>
               <DropdownMenuItem>Logout</DropdownMenuItem>
             </DropdownMenuContent>

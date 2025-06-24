@@ -197,7 +197,6 @@ export default function RequestsPage() {
               </div>
               {fleetLoading && (
                 <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
                   <span className="text-sm text-blue-700">Loading available equipment...</span>
                 </div>
               )}
@@ -292,7 +291,6 @@ export default function RequestsPage() {
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
                   Submitting Request...
                 </div>
               ) : (

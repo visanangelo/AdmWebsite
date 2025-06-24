@@ -333,11 +333,7 @@ const DataTableToolbar = React.memo(({
                     disabled={isRefreshing}
                     className="h-8 w-8 p-0"
                   >
-                    {isRefreshing ? (
-                      <RefreshCwIcon className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCwIcon className="h-4 w-4" />
-                    )}
+                    <RefreshCwIcon className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Refresh Data</TooltipContent>
@@ -822,54 +818,47 @@ export function DataTable({
               actionLoadingId={actionLoadingId}
             />
             
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVerticalIcon className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => handleViewDetails(row.original.id)}>
-                        <EyeIcon className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      
-                      {onEdit && (
-                        <DropdownMenuItem onClick={() => handleAction(onEdit, row.original.id, "Edit")}>
-                          <EditIcon className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                      )}
-                      
-                      {onReminder && (
-                        <DropdownMenuItem onClick={() => handleAction(onReminder, row.original.id, "Send Reminder")}>
-                          <AlertCircleIcon className="mr-2 h-4 w-4" />
-                          Send Reminder
-                        </DropdownMenuItem>
-                      )}
-                      
-                      <DropdownMenuSeparator />
-                      
-                      {onDelete && (
-                        <DropdownMenuItem 
-                          onClick={() => handleAction(onDelete, row.original.id, "Delete")}
-                          className="bg-red-100 text-red-800 focus:bg-red-200 focus:text-red-800"
-                        >
-                          <Trash2Icon className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>More options</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVerticalIcon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => handleViewDetails(row.original.id)}>
+                    <EyeIcon className="mr-2 h-4 w-4" />
+                    View Details
+                  </DropdownMenuItem>
+                  
+                  {onEdit && (
+                    <DropdownMenuItem onClick={() => handleAction(onEdit, row.original.id, "Edit")}>
+                      <EditIcon className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                  )}
+                  
+                  {onReminder && (
+                    <DropdownMenuItem onClick={() => handleAction(onReminder, row.original.id, "Send Reminder")}>
+                      <AlertCircleIcon className="mr-2 h-4 w-4" />
+                      Send Reminder
+                    </DropdownMenuItem>
+                  )}
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {onDelete && (
+                    <DropdownMenuItem 
+                      onClick={() => handleAction(onDelete, row.original.id, "Delete")}
+                      className="bg-red-100 text-red-800 focus:bg-red-200 focus:text-red-800"
+                    >
+                      <Trash2Icon className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         )
       },

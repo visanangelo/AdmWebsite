@@ -26,6 +26,92 @@ import { RentalRequest, FleetItem } from '@/types/rental'
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
 
+// Skeleton Components for Loading States
+const DashboardCardSkeleton = () => (
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-4 w-4 rounded-full" />
+    </CardHeader>
+    <CardContent>
+      <Skeleton className="h-8 w-16 mb-1" />
+      <Skeleton className="h-3 w-32" />
+    </CardContent>
+  </Card>
+)
+
+const ActionLoadingOverlay = ({ isVisible }: { isVisible: boolean }) => (
+  <AnimatePresence>
+    {isVisible && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"
+      >
+        <div className="flex items-center gap-3 bg-card p-4 rounded-lg shadow-lg border">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+          <span className="text-sm font-medium">Processing...</span>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+)
+
+const DataTableSkeleton = () => (
+  <div className="space-y-4">
+    {/* Header skeleton */}
+    <div className="flex items-center justify-between">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-8 w-8 rounded" />
+        <Skeleton className="h-8 w-20" />
+      </div>
+    </div>
+    
+    {/* Table skeleton */}
+    <div className="rounded-md border bg-card">
+      <div className="p-4">
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center space-x-4">
+              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+              <div className="flex space-x-2">
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-6" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+const FleetCardSkeleton = () => (
+  <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
+    <div className="flex justify-between items-start">
+      <div className="flex-1">
+        <Skeleton className="h-6 w-32 mb-2" />
+        <Skeleton className="h-5 w-20 mb-4" />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-16" />
+      </div>
+    </div>
+  </div>
+)
+
 // Memoized FleetCard component for better performance
 const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
   eq: FleetItem
@@ -64,14 +150,14 @@ const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadin
             <option value="Reserved">Reserved</option>
             <option value="Maintenance">Maintenance</option>
           </select>
-          <Button
-            variant="destructive"
-            size="sm"
+          <button
             onClick={() => onDelete(eq.id)}
             disabled={isLoading}
+            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+            title="Delete equipment"
           >
-            {isLoading ? <span className="animate-spin">⏳</span> : "Delete"}
-          </Button>
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -79,21 +165,105 @@ const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadin
 })
 
 // Custom hook for data fetching with React Query patterns
-const useDataFetching = () => {
+const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected' | 'connecting') => void) => {
   const notify = useNotify();
   const [data, setData] = useState<{
     requests: RentalRequest[]
     fleet: any[]
     stats: any
   }>({ requests: [], fleet: [], stats: null })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastFetch, setLastFetch] = useState<Date>(new Date())
   const loadingRef = useRef(false)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const realtimeSubscriptionsRef = useRef<any[]>([])
+  const initializedRef = useRef(false)
+
+  // Setup realtime subscriptions
+  const setupRealtimeSubscriptions = useCallback(() => {
+    // Cleanup existing subscriptions
+    realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe())
+    realtimeSubscriptionsRef.current = []
+
+    // Requests subscription
+    const requestsChannel = getSupabaseClient()
+      .channel('rental_requests_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'rental_requests' },
+        (payload) => {
+          // Use setData directly to avoid dependency issues
+          setData(prev => {
+            const { requests } = prev
+            let newRequests = [...requests]
+            
+            switch (payload.eventType) {
+              case 'INSERT':
+                newRequests.unshift(payload.new as RentalRequest)
+                break
+              case 'UPDATE':
+                newRequests = newRequests.map(req => 
+                  req.id === payload.new.id ? { ...req, ...payload.new } : req
+                )
+                break
+              case 'DELETE':
+                newRequests = newRequests.filter(req => req.id !== payload.old.id)
+                break
+            }
+            
+            return { ...prev, requests: newRequests }
+          })
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected')
+        } else if (status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('disconnected')
+        }
+      })
+
+    // Fleet subscription
+    const fleetChannel = getSupabaseClient()
+      .channel('fleet_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'fleet' },
+        (payload) => {
+          // Use setData directly to avoid dependency issues
+          setData(prev => {
+            const { fleet } = prev
+            let newFleet = [...fleet]
+            
+            switch (payload.eventType) {
+              case 'INSERT':
+                newFleet.unshift(payload.new)
+                break
+              case 'UPDATE':
+                newFleet = newFleet.map(item => 
+                  item.id === payload.new.id ? { ...item, ...payload.new } : item
+                )
+                break
+              case 'DELETE':
+                newFleet = newFleet.filter(item => item.id !== payload.old.id)
+                break
+            }
+            
+            return { ...prev, fleet: newFleet }
+          })
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected')
+        } else if (status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('disconnected')
+        }
+      })
+
+    realtimeSubscriptionsRef.current.push(requestsChannel, fleetChannel)
+  }, [setRealtimeStatus])
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
-    console.log('fetchData called, isManualRefresh:', isManualRefresh)
     if (loadingRef.current && !isManualRefresh) return
     
     loadingRef.current = true
@@ -105,16 +275,11 @@ const useDataFetching = () => {
         RentalRequestService.clearCache()
       }
       
-      console.log('Fetching data from services...')
       const [requestsResult, fleetResult, statsResult] = await Promise.all([
         RentalRequestService.fetchRequests(1, 100),
         RentalRequestService.fetchFleet(),
         RentalRequestService.fetchDashboardStats()
       ])
-
-      console.log('Requests result:', requestsResult)
-      console.log('Fleet result:', fleetResult)
-      console.log('Stats result:', statsResult)
 
       if (requestsResult.error) setError(requestsResult.error)
       if (fleetResult.error) setError(fleetResult.error)
@@ -126,7 +291,6 @@ const useDataFetching = () => {
         stats: statsResult.data
       }
       
-      console.log('Setting new data:', newData)
       setData(newData)
       setLastFetch(new Date())
     } catch (err) {
@@ -155,14 +319,45 @@ const useDataFetching = () => {
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current)
       }
+      // Cleanup realtime subscriptions
+      realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe())
     }
   }, [])
 
-  // Initial data fetch on mount
+  // Initial data fetch and realtime setup - only run once
   useEffect(() => {
-    console.log('DashboardProvider: Initial data fetch')
-    fetchData()
-  }, [fetchData])
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    
+    // Fetch data without showing loading state initially
+    const initializeData = async () => {
+      try {
+        const [requestsResult, fleetResult, statsResult] = await Promise.all([
+          RentalRequestService.fetchRequests(1, 100),
+          RentalRequestService.fetchFleet(),
+          RentalRequestService.fetchDashboardStats()
+        ])
+
+        const newData = {
+          requests: requestsResult.data || [],
+          fleet: fleetResult.data || [],
+          stats: statsResult.data
+        }
+        
+        setData(newData)
+        setLastFetch(new Date())
+        
+        // Setup realtime subscriptions after initial data load
+        setupRealtimeSubscriptions()
+      } catch (err) {
+        console.error('Error in initial data fetch:', err)
+        setError('Failed to load data')
+        notify.error('Failed to load data. Please refresh the page.')
+      }
+    }
+    
+    initializeData()
+  }, []) // Empty dependency array to prevent Fast Refresh reloads
 
   return {
     data,
@@ -190,6 +385,7 @@ interface DashboardContextType {
   tab: string
   autoRefreshEnabled: boolean
   refreshInterval: number
+  realtimeStatus: 'connected' | 'disconnected' | 'connecting'
   fetchData: (isManualRefresh?: boolean) => Promise<void>
   debouncedFetch: (isManualRefresh?: boolean) => void
   setActionLoadingId: (id: string | null) => void
@@ -205,6 +401,7 @@ interface DashboardContextType {
   handleBulkDecline: (ids: string[]) => Promise<void>
   handleBulkDelete: (ids: string[]) => Promise<void>
   handleFleetDelete: (id: string) => Promise<void>
+  handleFleetStatusUpdate: (fleetId: string, newStatus: string) => Promise<void>
   handleEdit: (id: string, updatedFields: any) => Promise<void>
   handleDirectDeleteConfirm?: () => Promise<void>
   handleDirectDeleteCancel?: () => void
@@ -225,10 +422,11 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
   const [tab, setTab] = useState('dashboard')
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
-  const [refreshInterval, setRefreshInterval] = useState(30000)
+  const [refreshInterval, setRefreshInterval] = useState(60000)
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting')
 
   // Use the data fetching hook
-  const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData, notify } = useDataFetching()
+  const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData, notify } = useDataFetching(setRealtimeStatus)
 
   // Service validation function
   const validateService = useCallback((serviceName: string, methodName: string) => {
@@ -265,11 +463,16 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     ])
   }, [])
 
-  const createActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, successMessage: string) => {
+  const createActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, successMessage: string, optimisticUpdate?: (id: string) => void) => {
     return async (id: string) => {
       setActionLoadingId(id)
       try {
         const req = findRequest(id)
+        
+        // Apply optimistic update if provided
+        if (optimisticUpdate) {
+          optimisticUpdate(id)
+        }
         
         // Validate service method exists
         if (!serviceMethod || typeof serviceMethod !== 'function') {
@@ -286,65 +489,46 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
           request_user_id: req?.user_id
         })
         
-        // Use a small delay for smoother UX
-        setTimeout(() => {
-          debouncedFetch()
-        }, 100)
       } catch (error) {
         console.error(`Error in ${actionType} action:`, error)
         notify.error(error instanceof Error ? error.message : `Failed to ${actionType.toLowerCase()} request`)
+        
+        // Revert optimistic update on error
+        setTimeout(() => {
+          debouncedFetch(true)
+        }, 100)
       } finally {
         setActionLoadingId(null)
       }
     }
   }, [findRequest, logAudit, debouncedFetch])
 
-  const handleApprove = useCallback(async (id: string) => {
-    setActionLoadingId(id)
-    try {
-      const req = findRequest(id)
-      if (!req) {
-        notify.error('Request not found')
-        return
+  const handleApprove = useCallback(
+    createActionHandler('Approved', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
+          throw new Error('RentalRequestService.approveRequest is not available')
+        }
+        return RentalRequestService.approveRequest(id)
+      }, 
+      'Request approved and equipment reserved!',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Approved' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'Reserved' } : f
+            ) : prev.fleet
+          }
+        })
       }
-      
-      const conflicts = data.requests.some(r =>
-        r.equipment_id === req.equipment_id &&
-        r.status === "Approved" &&
-        ((req.start_date <= r.end_date) && (req.end_date >= r.start_date))
-      )
-      if (conflicts) {
-        notify.error("This equipment is already reserved for the selected dates.")
-        return
-      }
-
-      // Validate service exists
-      if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
-        throw new Error('RentalRequestService is not available')
-      }
-
-      await RentalRequestService.approveRequest(id)
-      await getSupabaseClient().from("fleet").update({ status: "Reserved" }).eq("id", req.equipment_id)
-      await logAudit("Approved rental request", {
-        request_id: id,
-        equipment_id: req.equipment_id,
-        equipment_name: req.equipment?.name,
-        request_user_id: req.user_id
-      })
-      notify.success("Request approved and equipment reserved!")
-      
-      // Use a small delay for smoother UX
-      setTimeout(() => {
-        debouncedFetch()
-      }, 100)
-    } catch (error) {
-      // Only show error toast if an error actually occurred
-      console.error('Error in approve action:', error)
-      notify.error(error instanceof Error ? error.message : 'Failed to approve request')
-    } finally {
-      setActionLoadingId(null)
-    }
-  }, [findRequest, data.requests, logAudit, debouncedFetch])
+    ),
+    [createActionHandler]
+  )
 
   const handleDecline = useCallback(
     createActionHandler('Declined', 
@@ -354,7 +538,21 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return RentalRequestService.declineRequest(id)
       }, 
-      'Request declined.'
+      'Request declined.',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Declined' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+            ) : prev.fleet
+          }
+        })
+      }
     ),
     [createActionHandler]
   )
@@ -367,7 +565,21 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return RentalRequestService.completeRequest(id)
       }, 
-      'Request marked as completed.'
+      'Request marked as completed.',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Completed' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+            ) : prev.fleet
+          }
+        })
+      }
     ),
     [createActionHandler]
   )
@@ -380,7 +592,21 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return RentalRequestService.reopenRequest(id)
       }, 
-      'Request reopened.'
+      'Request reopened.',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Reopened' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'In Use' } : f
+            ) : prev.fleet
+          }
+        })
+      }
     ),
     [createActionHandler]
   )
@@ -393,7 +619,21 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return RentalRequestService.cancelRequest(id)
       }, 
-      'Request cancelled.'
+      'Request cancelled.',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Cancelled' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+            ) : prev.fleet
+          }
+        })
+      }
     ),
     [createActionHandler]
   )
@@ -489,6 +729,51 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [logAudit, debouncedFetch])
 
+  const handleFleetStatusUpdate = async (fleetId: string, newStatus: string) => {
+    try {
+      // Optimistic update
+      setData(prev => ({
+        ...prev,
+        fleet: prev.fleet.map(item => 
+          item.id === fleetId ? { ...item, status: newStatus } : item
+        )
+      }))
+
+      await RentalRequestService.updateFleetStatus(fleetId, newStatus)
+      notify.success('Fleet status updated successfully')
+      
+      // Log audit if available
+      try {
+        const { data: { user } } = await getSupabaseClient().auth.getUser()
+        if (user?.id) {
+          await getSupabaseClient().from('audit_log').insert([
+            {
+              action: 'Updated fleet status',
+              user_id: user.id,
+              details: {
+                user_email: user.email,
+                user_name: user.user_metadata?.name,
+                fleet_id: fleetId,
+                new_status: newStatus
+              }
+            }
+          ])
+        }
+      } catch (auditError) {
+        console.error('Failed to log audit:', auditError)
+      }
+      
+    } catch (error) {
+      console.error('Error updating fleet status:', error)
+      notify.error('Error updating fleet status')
+      
+      // Revert optimistic update on error
+      setTimeout(() => {
+        debouncedFetch(true)
+      }, 100)
+    }
+  }
+
   const contextValue = {
     data,
     loading,
@@ -498,6 +783,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     tab,
     autoRefreshEnabled,
     refreshInterval,
+    realtimeStatus,
     fetchData,
     debouncedFetch,
     setActionLoadingId,
@@ -514,6 +800,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     handleBulkDecline,
     handleBulkDelete,
     handleFleetDelete,
+    handleFleetStatusUpdate,
     handleEdit
   }
 
@@ -562,6 +849,7 @@ const DashboardContent = ({
     tab,
     autoRefreshEnabled,
     refreshInterval,
+    realtimeStatus,
     fetchData,
     debouncedFetch,
     setActionLoadingId,
@@ -577,13 +865,19 @@ const DashboardContent = ({
     handleBulkDecline,
     handleBulkDelete,
     handleFleetDelete,
-    handleEdit
+    handleEdit,
+    handleFleetStatusUpdate
   } = useDashboard()
 
-  // Performance monitoring
-  const logPerformance = useCallback((operation: string, duration: number) => {
-    console.log(`Performance: ${operation} took ${duration}ms`)
-  }, [])
+  // Memoize expensive calculations
+  const dashboardStats = useMemo(() => {
+    const activeRentals = requests.filter(r => r.status === 'Approved').length
+    const fleetAvailable = fleet.filter(f => f.status === 'Available').length
+    const fleetInUse = fleet.filter(f => f.status === 'In Use').length
+    const pendingRequests = requests.filter(r => r.status === 'Pending').length
+    
+    return { activeRentals, fleetAvailable, fleetInUse, pendingRequests }
+  }, [requests, fleet])
 
   // Auto-refresh effect
   useEffect(() => {
@@ -596,11 +890,6 @@ const DashboardContent = ({
     return () => clearInterval(interval)
   }, [autoRefreshEnabled, refreshInterval, debouncedFetch])
 
-  // Initial data fetch
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
   // Load audit log when tab changes
   useEffect(() => {
     if (tab === 'audit' && !auditLogLoaded) {
@@ -609,13 +898,6 @@ const DashboardContent = ({
   }, [tab, auditLogLoaded, fetchAuditLog])
 
   const emptyFleet = fleet.length === 0
-  const activeRentals = requests.filter(r => r.status === 'Approved').length
-  const fleetAvailable = fleet.filter(f => f.status === 'Available').length
-  const fleetInUse = fleet.filter(f => f.status === 'In Use').length
-  const pendingRequests = requests.filter(r => r.status === 'Pending').length
-
-  // Add debugging
-  console.log('Dashboard data:', { requests, fleet, activeRentals, fleetAvailable, fleetInUse, pendingRequests })
 
   const handleDeleteWrapper = async (id: string) => {
     const row = requests.find(r => r.id === id)
@@ -693,21 +975,82 @@ const DashboardContent = ({
   const router = useRouter();
   const urlTab = searchParams.get("tab") || "dashboard";
 
-  // Sync tab state with URL
+  // Only update tab state if needed
   useEffect(() => {
-    setTab(urlTab);
-  }, [urlTab]);
+    if (tab !== urlTab) setTab(urlTab);
+  }, [urlTab, tab]);
 
-  const handleTabChange = (value: string) => {
+  // Handle browser back/forward buttons for tab navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const newTab = urlParams.get('tab') || 'dashboard';
+      if (tab !== newTab) {
+        setTab(newTab);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [tab]);
+
+  const handleTabChange = useCallback((value: string) => {
+    if (tab === value) return; // Prevent unnecessary updates
     setTab(value);
-    router.replace(`/dashboard?tab=${value}`);
-  };
+    // Use pushState instead of router.replace for instant navigation
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', value);
+    window.history.pushState({}, '', url.toString());
+  }, [tab]);
 
-  // Fetch data on mount and when tab changes
+  // Keyboard navigation for tabs
   useEffect(() => {
-    fetchData();
-  }, [fetchData, tab]);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle keyboard navigation when not in an input field
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
 
+      const tabOrder = ['dashboard', 'requests', 'fleet', 'settings'];
+      const currentIndex = tabOrder.indexOf(tab);
+      
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          event.preventDefault();
+          const nextIndex = (currentIndex + 1) % tabOrder.length;
+          handleTabChange(tabOrder[nextIndex]);
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          event.preventDefault();
+          const prevIndex = currentIndex === 0 ? tabOrder.length - 1 : currentIndex - 1;
+          handleTabChange(tabOrder[prevIndex]);
+          break;
+        case '1':
+          event.preventDefault();
+          handleTabChange('dashboard');
+          break;
+        case '2':
+          event.preventDefault();
+          handleTabChange('requests');
+          break;
+        case '3':
+          event.preventDefault();
+          handleTabChange('fleet');
+          break;
+        case '4':
+          event.preventDefault();
+          handleTabChange('settings');
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tab, handleTabChange]);
+
+  // Memoize tab content to prevent unnecessary re-renders
   const tabContent = useMemo(() => {
     switch (tab) {
       case 'dashboard':
@@ -715,46 +1058,57 @@ const DashboardContent = ({
           <TabContent tabKey="dashboard">
             <div className="max-w-7xl w-full mx-auto px-4 pb-12">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Active Rentals</CardTitle>
-                    <Truck className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{activeRentals}</div>
-                    <p className="text-xs text-muted-foreground">Currently rented equipment</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Fleet Available</CardTitle>
-                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{fleetAvailable}</div>
-                    <p className="text-xs text-muted-foreground">Ready for rental</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Fleet In Use</CardTitle>
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{fleetInUse}</div>
-                    <p className="text-xs text-muted-foreground">Currently in use</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{pendingRequests}</div>
-                    <p className="text-xs text-muted-foreground">Awaiting approval</p>
-                  </CardContent>
-                </Card>
+                {loading ? (
+                  <>
+                    <DashboardCardSkeleton />
+                    <DashboardCardSkeleton />
+                    <DashboardCardSkeleton />
+                    <DashboardCardSkeleton />
+                  </>
+                ) : (
+                  <>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active Rentals</CardTitle>
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{dashboardStats.activeRentals}</div>
+                        <p className="text-xs text-muted-foreground">Currently rented equipment</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Fleet Available</CardTitle>
+                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{dashboardStats.fleetAvailable}</div>
+                        <p className="text-xs text-muted-foreground">Ready for rental</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Fleet In Use</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{dashboardStats.fleetInUse}</div>
+                        <p className="text-xs text-muted-foreground">Currently in use</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{dashboardStats.pendingRequests}</div>
+                        <p className="text-xs text-muted-foreground">Awaiting approval</p>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
               </div>
             </div>
           </TabContent>
@@ -774,17 +1128,29 @@ const DashboardContent = ({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-xs">
+                      <div className={`w-2 h-2 rounded-full ${
+                        realtimeStatus === 'connected' ? 'bg-green-500 animate-pulse' :
+                        realtimeStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+                        'bg-red-500'
+                      }`} />
+                      <span className={`${
+                        realtimeStatus === 'connected' ? 'text-green-600' :
+                        realtimeStatus === 'connecting' ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {realtimeStatus === 'connected' ? 'Live' :
+                         realtimeStatus === 'connecting' ? 'Connecting' :
+                         'Disconnected'}
+                      </span>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => debouncedFetch(true)}
-                      disabled={loading}
+                      disabled={loading && !getActionLoadingId()}
                     >
-                      {loading && !getActionLoadingId() ? (
-                        <RefreshCwIcon className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCwIcon className="h-4 w-4 mr-2" />
-                      )}
+                      <RefreshCwIcon className="h-4 w-4 mr-2" />
                       Refresh
                     </Button>
                   </div>
@@ -793,27 +1159,31 @@ const DashboardContent = ({
 
               {/* Data Table Section */}
               <div className="space-y-4">
-                <DataTable
-                  data={requests as any}
-                  onApprove={handleApprove}
-                  onDecline={handleDecline}
-                  onDelete={handleDeleteWrapper}
-                  onEdit={handleEdit}
-                  onComplete={handleComplete}
-                  onReopen={handleReopen}
-                  onCancel={handleCancel}
-                  onViewDetails={handleViewDetails}
-                  onBulkApprove={handleBulkApprove}
-                  onBulkDecline={handleBulkDecline}
-                  onBulkDelete={handleBulkDelete}
-                  loading={loading}
-                  error={error || undefined}
-                  actionLoadingId={getActionLoadingId()}
-                  pageSize={10}
-                  enablePagination={true}
-                  enableColumnVisibility={true}
-                  enableBulkActions={true}
-                />
+                {loading ? (
+                  <DataTableSkeleton />
+                ) : (
+                  <DataTable
+                    data={requests as any}
+                    onApprove={handleApprove}
+                    onDecline={handleDecline}
+                    onDelete={handleDeleteWrapper}
+                    onEdit={handleEdit}
+                    onComplete={handleComplete}
+                    onReopen={handleReopen}
+                    onCancel={handleCancel}
+                    onViewDetails={handleViewDetails}
+                    onBulkApprove={handleBulkApprove}
+                    onBulkDecline={handleBulkDecline}
+                    onBulkDelete={handleBulkDelete}
+                    loading={false}
+                    error={error || undefined}
+                    actionLoadingId={getActionLoadingId()}
+                    pageSize={10}
+                    enablePagination={true}
+                    enableColumnVisibility={true}
+                    enableBulkActions={true}
+                  />
+                )}
               </div>
 
               {/* Delete Confirmation Dialog */}
@@ -937,7 +1307,11 @@ const DashboardContent = ({
             <div className="max-w-7xl w-full mx-auto px-4 pb-12">
               <div className="space-y-4">
                 {loading ? (
-                  <Skeleton className="h-32 w-full rounded-xl" />
+                  <>
+                    <FleetCardSkeleton />
+                    <FleetCardSkeleton />
+                    <FleetCardSkeleton />
+                  </>
                 ) : emptyFleet ? (
                   <div className="text-center py-8 text-muted-foreground">No fleet vehicles found.</div>
                 ) : (
@@ -951,41 +1325,10 @@ const DashboardContent = ({
                         onStatus={async (id: string, status: string) => {
                           setActionLoadingId(id)
                           try {
-                            if (!RentalRequestService || typeof RentalRequestService.updateFleetStatus !== 'function') {
-                              throw new Error('RentalRequestService.updateFleetStatus is not available')
-                            }
-                            
-                            await RentalRequestService.updateFleetStatus(id, status)
-                            notify.success(`Fleet status updated to ${status}`)
-                            
-                            // Log audit if available
-                            try {
-                              const { data: { user } } = await getSupabaseClient().auth.getUser()
-                              if (user?.id) {
-                                await getSupabaseClient().from('audit_log').insert([
-                                  {
-                                    action: 'Updated fleet status',
-                                    user_id: user.id,
-                                    details: {
-                                      user_email: user.email,
-                                      user_name: user.user_metadata?.name,
-                                      fleet_id: id,
-                                      new_status: status
-                                    }
-                                  }
-                                ])
-                              }
-                            } catch (auditError) {
-                              console.error('Failed to log audit:', auditError)
-                            }
-                            
-                            // Use a small delay for smoother UX
-                            setTimeout(() => {
-                              debouncedFetch()
-                            }, 100)
+                            await handleFleetStatusUpdate(id, status)
                           } catch (error) {
-                            console.error('Error in fleet status update:', error)
-                            notify.error(error instanceof Error ? error.message : 'Failed to update fleet status')
+                            console.error('Error updating fleet status:', error)
+                            notify.error('Error updating fleet status')
                           } finally {
                             setActionLoadingId(null)
                           }
@@ -1018,336 +1361,53 @@ const DashboardContent = ({
   }, [
     tab, loading, getActionLoadingId(), requests, fleet, emptyFleet, 
     refreshInterval, autoRefreshEnabled, deleteDialog, detailsId,
-    activeRentals, fleetAvailable, fleetInUse, pendingRequests,
+    dashboardStats, realtimeStatus, error,
     handleApprove, handleDecline, handleEdit, handleComplete,
     handleReopen, handleCancel, handleViewDetails, handleBulkApprove, handleBulkDecline,
-    handleBulkDelete, handleFleetDelete, debouncedFetch, logPerformance, fetchAuditLog,
+    handleBulkDelete, handleFleetDelete, debouncedFetch, fetchAuditLog,
     setAuditOpen, setRefreshInterval, setAutoRefreshEnabled, setDetailsId, TabContent
   ])
 
   return (
     <SidebarProvider>
-      <AppSidebar variant="inset" activeTab={tab} />
+      <AppSidebar variant="inset" activeTab={tab} onTabChange={handleTabChange} />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              {tab === "dashboard" && (
-                <TabContent tabKey="dashboard">
-                  <div className="max-w-7xl w-full mx-auto px-4 pb-12">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                      <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Active Rentals</CardTitle>
-                          <Truck className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{activeRentals}</div>
-                          <p className="text-xs text-muted-foreground">Currently rented equipment</p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Fleet Available</CardTitle>
-                          <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{fleetAvailable}</div>
-                          <p className="text-xs text-muted-foreground">Ready for rental</p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Fleet In Use</CardTitle>
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{fleetInUse}</div>
-                          <p className="text-xs text-muted-foreground">Currently in use</p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{pendingRequests}</div>
-                          <p className="text-xs text-muted-foreground">Awaiting approval</p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </TabContent>
-              )}
-              {tab === "requests" && (
-                <TabContent tabKey="requests">
-                  <div className="max-w-7xl w-full mx-auto px-4 pb-12">
-                    {/* Header Section */}
-                    <div className="mb-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-2xl font-bold tracking-tight">Rental Requests</h2>
-                          <p className="text-muted-foreground">
-                            Manage and track all rental requests in the system
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => debouncedFetch(true)}
-                            disabled={loading}
-                          >
-                            {loading && !getActionLoadingId() ? (
-                              <RefreshCwIcon className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <RefreshCwIcon className="h-4 w-4 mr-2" />
-                            )}
-                            Refresh
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Data Table Section */}
-                    <div className="space-y-4">
-                      <DataTable
-                        data={requests as any}
-                        onApprove={handleApprove}
-                        onDecline={handleDecline}
-                        onDelete={handleDeleteWrapper}
-                        onEdit={handleEdit}
-                        onComplete={handleComplete}
-                        onReopen={handleReopen}
-                        onCancel={handleCancel}
-                        onViewDetails={handleViewDetails}
-                        onBulkApprove={handleBulkApprove}
-                        onBulkDecline={handleBulkDecline}
-                        onBulkDelete={handleBulkDelete}
-                        loading={loading}
-                        error={error || undefined}
-                        actionLoadingId={getActionLoadingId()}
-                        pageSize={10}
-                        enablePagination={true}
-                        enableColumnVisibility={true}
-                        enableBulkActions={true}
-                      />
-                    </div>
-
-                    {/* Delete Confirmation Dialog */}
-                    <Dialog open={deleteDialog.open} onOpenChange={(open) => !open && handleDirectDeleteCancel()}>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <Trash2Icon className="h-5 w-5 text-destructive" />
-                            Delete Rental Request
-                          </DialogTitle>
-                          <DialogDescription>
-                            Are you sure you want to delete this rental request? This action cannot be undone.
-                          </DialogDescription>
-                        </DialogHeader>
-                        {deleteDialog.row && (
-                          <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="font-medium">ID:</span> {deleteDialog.row.id}</div>
-                              <div><span className="font-medium">Status:</span> 
-                                <Badge variant="outline" className="ml-1">{deleteDialog.row.status}</Badge>
-                              </div>
-                              <div><span className="font-medium">Equipment:</span> {deleteDialog.row.equipment}</div>
-                              <div><span className="font-medium">Requester:</span> {deleteDialog.row.requester}</div>
-                              <div className="col-span-2">
-                                <span className="font-medium">Date:</span> {new Date(deleteDialog.row.date).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        <DialogFooter className="gap-2">
-                          <Button variant="outline" onClick={handleDirectDeleteCancel}>
-                            Cancel
-                          </Button>
-                          <Button 
-                            variant="destructive" 
-                            onClick={handleDirectDeleteConfirm}
-                            className="gap-2"
-                          >
-                            <Trash2Icon className="h-4 w-4" />
-                            Delete Request
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* Details Dialog */}
-                    <Dialog open={!!detailsId} onOpenChange={open => setDetailsId(open ? detailsId : null)}>
-                      <DialogContent className="sm:max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <EyeIcon className="h-5 w-5" />
-                            Rental Request Details
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          {requests.filter(r => r.id === detailsId).map(r => (
-                            <div key={r.id} className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">Equipment:</span>
-                                    <span className="text-sm">{typeof r.equipment === 'string' ? r.equipment : r.equipment?.name || "-"}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">User:</span>
-                                    <span className="text-sm">{r.user_id}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">Status:</span>
-                                    <Badge variant={
-                                      r.status === "Completed" ? "secondary" :
-                                      r.status === "Pending" ? "outline" :
-                                      r.status === "Cancelled" ? "destructive" : "default"
-                                    }>
-                                      {r.status}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">Start Date:</span>
-                                    <span className="text-sm">{new Date(r.start_date).toLocaleDateString()}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">End Date:</span>
-                                    <span className="text-sm">{new Date(r.end_date).toLocaleDateString()}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">Created:</span>
-                                    <span className="text-sm">{new Date(r.date || r.created_at).toLocaleDateString()}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <span className="font-medium text-sm">Location:</span>
-                                <p className="text-sm bg-muted/50 p-2 rounded">{r.project_location}</p>
-                              </div>
-                              {r.notes && (
-                                <div className="space-y-2">
-                                  <span className="font-medium text-sm">Notes:</span>
-                                  <p className="text-sm bg-muted/50 p-2 rounded">{r.notes}</p>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setDetailsId(null)}>
-                            Close
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </TabContent>
-              )}
-              {tab === "fleet" && (
-                <TabContent tabKey="fleet">
-                  <div className="max-w-7xl w-full mx-auto px-4 pb-12">
-                    <div className="space-y-4">
-                      {loading ? (
-                        <Skeleton className="h-32 w-full rounded-xl" />
-                      ) : emptyFleet ? (
-                        <div className="text-center py-8 text-muted-foreground">No fleet vehicles found.</div>
-                      ) : (
-                        fleet
-                          .slice()
-                          .sort((a, b) => a.id.localeCompare(b.id))
-                          .map(eq => (
-                            <FleetCard
-                              key={eq.id}
-                              eq={eq}
-                              onStatus={async (id: string, status: string) => {
-                                setActionLoadingId(id)
-                                try {
-                                  if (!RentalRequestService || typeof RentalRequestService.updateFleetStatus !== 'function') {
-                                    throw new Error('RentalRequestService.updateFleetStatus is not available')
-                                  }
-                                  
-                                  await RentalRequestService.updateFleetStatus(id, status)
-                                  notify.success(`Fleet status updated to ${status}`)
-                                  
-                                  // Log audit if available
-                                  try {
-                                    const { data: { user } } = await getSupabaseClient().auth.getUser()
-                                    if (user?.id) {
-                                      await getSupabaseClient().from('audit_log').insert([
-                                        {
-                                          action: 'Updated fleet status',
-                                          user_id: user.id,
-                                          details: {
-                                            user_email: user.email,
-                                            user_name: user.user_metadata?.name,
-                                            fleet_id: id,
-                                            new_status: status
-                                          }
-                                        }
-                                      ])
-                                    }
-                                  } catch (auditError) {
-                                    console.error('Failed to log audit:', auditError)
-                                  }
-                                  
-                                  // Use a small delay for smoother UX
-                                  setTimeout(() => {
-                                    debouncedFetch()
-                                  }, 100)
-                                } catch (error) {
-                                  console.error('Error in fleet status update:', error)
-                                  notify.error(error instanceof Error ? error.message : 'Failed to update fleet status')
-                                } finally {
-                                  setActionLoadingId(null)
-                                }
-                              }}
-                              onDelete={handleFleetDelete}
-                              loadingId={getActionLoadingId()}
-                            />
-                          ))
-                      )}
-                    </div>
-                  </div>
-                </TabContent>
-              )}
-              {tab === "settings" && (
-                <TabContent tabKey="settings">
-                  <div className="max-w-xl mx-auto px-4 pb-12">
-                    <div className="bg-card p-8 rounded-xl border border-border">
-                      <h2 className="text-xl font-bold mb-4 text-primary">Settings</h2>
-                      <div className="text-muted-foreground">More settings coming soon...</div>
-                    </div>
-                  </div>
-                </TabContent>
-              )}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ 
+                    duration: 0.15, 
+                    ease: "easeOut"
+                  }}
+                  className="flex-1"
+                >
+                  {tabContent}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
         </div>
       </SidebarInset>
+      <ActionLoadingOverlay isVisible={!!actionLoadingId} />
     </SidebarProvider>
   )
 }
 
 // TabContent component
-const TabContent = ({ children, tabKey }: { children: React.ReactNode; tabKey: string }) => (
-  <motion.div
-    key={tabKey}
-    initial={{ opacity: 0, x: 64 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: -64 }}
-    transition={{ type: "spring", stiffness: 300, damping: 30, duration: 0.35 }}
-    className="will-change-transform"
-  >
-    {children}
-  </motion.div>
-)
+const TabContent = React.memo(({ children, tabKey }: { children: React.ReactNode; tabKey: string }) => (
+  <div className="flex-1 overflow-hidden transition-opacity duration-200 ease-in-out">
+    <div className="h-full overflow-y-auto">
+      {children}
+    </div>
+  </div>
+))
 
 export default function Page() {
   const [user, setUser] = useState<any>(null)
@@ -1433,7 +1493,7 @@ export default function Page() {
   }
 
   if (!authChecked) {
-    return <div className="flex items-center justify-center min-h-screen"><span className="animate-spin text-2xl">⏳</span></div>
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
 
   if (!isAdmin) {
