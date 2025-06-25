@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "@/lib/supabaseClient";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { getSupabaseClient } from "@/features/shared";
+import { Input } from "@/features/shared/components/ui/input";
+import { Button } from "@/features/shared/components/ui/button";
 import { Suspense } from "react"
 import { Metadata } from "next"
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
     else {
       // Get user metadata to check for admin
       const { data } = await getSupabaseClient().auth.getUser();
-      if (data.user?.user_metadata?.role === "admin") {
+      if (data.user?.app_metadata?.role === "super-admin") {
         router.push("/dashboard");
       } else {
         router.push("/");

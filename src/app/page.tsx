@@ -1,15 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getSupabaseClient } from "@/lib/supabaseClient"
+import { getSupabaseClient } from "@/features/shared"
 import { useRouter } from "next/navigation"
 import type React from "react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/features/shared/components/ui/button"
+import { Card, CardContent } from "@/features/shared/components/ui/card"
+import { Input } from "@/features/shared/components/ui/input"
+import { Textarea } from "@/features/shared/components/ui/textarea"
+import { Label } from "@/features/shared/components/ui/label"
 import {
   Phone,
   Mail,
@@ -44,10 +44,10 @@ import {
   Send,
 } from "lucide-react"
 import Link from "next/link"
-import { AnimatedStat } from "@/components/ui/animated-stat"
-import { Navbar } from "@/components/ui/navbar"
+import { AnimatedStat } from "@/features/shared/components/ui/animated-stat"
+import { Navbar } from "@/features/shared/components/ui/navbar"
 import { useLanguage } from '@/contexts/language-context'
-import BlurText from "@/components/ui/blur-text"
+import BlurText from "@/features/shared/components/ui/blur-text"
 import { translations } from "@/config/languages"
 import { motion } from "framer-motion"
 

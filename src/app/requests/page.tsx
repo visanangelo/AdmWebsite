@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
-import { RentalRequestService } from "@/services/rental-requests";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { useNotify } from '@/hooks/useNotify';
+import { getSupabaseClient } from "@/features/shared";
+import { RentalRequestService } from "@/features/rental-requests";
+import { Input } from "@/features/shared/components/ui/input";
+import { Textarea } from "@/features/shared/components/ui/textarea";
+import { Button } from "@/features/shared/components/ui/button";
+import { useNotify } from '@/features/shared';
 import { Calendar, MapPin, Wrench, Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 // Force dynamic rendering to prevent build-time errors
