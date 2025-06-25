@@ -22,16 +22,71 @@ import { Truck, CheckCircle, Clock, AlertCircle, RefreshCwIcon, Trash2Icon, EyeI
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { RentalRequest, FleetItem } from '@/types/rental'
+import { useAuth } from '@/hooks/use-auth'
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
 
-// Skeleton Components for Loading States
+// Enhanced Dashboard Card with better visual design
+const DashboardCard = React.memo(({ 
+  title, 
+  value, 
+  icon: Icon, 
+  description, 
+  trend, 
+  loading = false 
+}: {
+  title: string
+  value: string | number
+  icon: React.ComponentType<{ className?: string }>
+  description: string
+  trend?: { value: number; isPositive: boolean }
+  loading?: boolean
+}) => {
+  if (loading) {
+    return <DashboardCardSkeleton />
+  }
+
+  return (
+    <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-gray-50/30 to-gray-100/20 border border-gray-200/60 hover:border-gray-300/80 transition-all duration-300 hover:shadow-lg hover:shadow-gray-200/50 hover:scale-[1.02]">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+        <CardTitle className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+          {title}
+        </CardTitle>
+        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+          <Icon className="h-4 w-4 text-primary" />
+        </div>
+      </CardHeader>
+      <CardContent className="relative z-10">
+        <div className="flex items-baseline gap-2">
+          <div className="text-2xl font-bold text-gray-900 group-hover:text-primary transition-colors">
+            {value}
+          </div>
+          {trend && (
+            <div className={`flex items-center gap-1 text-xs font-medium ${
+              trend.isPositive ? 'text-green-600' : 'text-red-600'
+            }`}>
+              <span>{trend.isPositive ? '↗' : '↘'}</span>
+              <span>{Math.abs(trend.value)}%</span>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mt-1 group-hover:text-gray-600 transition-colors">
+          {description}
+        </p>
+      </CardContent>
+    </Card>
+  )
+})
+
+// Enhanced Loading Skeleton with shimmer effect
 const DashboardCardSkeleton = () => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+  <Card className="relative overflow-hidden bg-gradient-to-br from-white via-gray-50/30 to-gray-100/20 border border-gray-200/60">
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
       <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-4 w-4 rounded-full" />
+      <Skeleton className="h-8 w-8 rounded-lg" />
     </CardHeader>
     <CardContent>
       <Skeleton className="h-8 w-16 mb-1" />
@@ -40,6 +95,7 @@ const DashboardCardSkeleton = () => (
   </Card>
 )
 
+// Enhanced Action Loading Overlay with better UX
 const ActionLoadingOverlay = ({ isVisible }: { isVisible: boolean }) => (
   <AnimatePresence>
     {isVisible && (
@@ -49,45 +105,60 @@ const ActionLoadingOverlay = ({ isVisible }: { isVisible: boolean }) => (
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"
       >
-        <div className="flex items-center gap-3 bg-card p-4 rounded-lg shadow-lg border">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-          <span className="text-sm font-medium">Processing...</span>
-        </div>
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="flex items-center gap-4 bg-card p-6 rounded-xl shadow-2xl border border-gray-200/60"
+        >
+          <div className="relative">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary/20 border-t-primary"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary/40 animate-ping" />
+          </div>
+          <div>
+            <span className="text-sm font-medium text-gray-900">Processing...</span>
+            <p className="text-xs text-gray-500">Please wait while we complete your request</p>
+          </div>
+        </motion.div>
       </motion.div>
     )}
   </AnimatePresence>
 )
 
+// Enhanced Data Table Skeleton with better visual design
 const DataTableSkeleton = () => (
-  <div className="space-y-4">
+  <div className="space-y-6">
     {/* Header skeleton */}
     <div className="flex items-center justify-between">
-      <div className="space-y-2">
+      <div className="space-y-3">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-64" />
       </div>
-      <div className="flex items-center gap-2">
-        <Skeleton className="h-8 w-8 rounded" />
-        <Skeleton className="h-8 w-20" />
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-3 rounded-full" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-10 w-24 rounded-lg" />
       </div>
     </div>
     
     {/* Table skeleton */}
-    <div className="rounded-md border bg-card">
-      <div className="p-4">
-        <div className="space-y-3">
+    <div className="rounded-xl border border-gray-200/60 bg-card overflow-hidden">
+      <div className="p-6">
+        <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center space-x-4">
-              <Skeleton className="h-4 w-4" />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-32" />
+            <div key={i} className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50/50">
+              <Skeleton className="h-4 w-4 rounded" />
               <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-32" />
               <Skeleton className="h-4 w-20" />
-              <div className="flex space-x-2">
-                <Skeleton className="h-6 w-16" />
-                <Skeleton className="h-6 w-16" />
-                <Skeleton className="h-6 w-6" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-24" />
+              <div className="flex space-x-2 ml-auto">
+                <Skeleton className="h-7 w-16 rounded-md" />
+                <Skeleton className="h-7 w-16 rounded-md" />
+                <Skeleton className="h-7 w-7 rounded-md" />
               </div>
             </div>
           ))}
@@ -97,22 +168,7 @@ const DataTableSkeleton = () => (
   </div>
 )
 
-const FleetCardSkeleton = () => (
-  <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
-    <div className="flex justify-between items-start">
-      <div className="flex-1">
-        <Skeleton className="h-6 w-32 mb-2" />
-        <Skeleton className="h-5 w-20 mb-4" />
-      </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-8 w-16" />
-      </div>
-    </div>
-  </div>
-)
-
-// Memoized FleetCard component for better performance
+// Enhanced Fleet Card with better visual design
 const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
   eq: FleetItem
   onStatus: (id: string, status: string) => void
@@ -121,21 +177,37 @@ const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadin
 }) {
   const isLoading = loadingId === eq.id
   const statusColors = {
-    "Available": "bg-green-100 text-green-800 border-green-200",
-    "In Use": "bg-blue-100 text-blue-800 border-blue-200",
-    "Reserved": "bg-yellow-100 text-yellow-800 border-yellow-200",
-    "Maintenance": "bg-red-100 text-red-800 border-red-200"
+    "Available": "bg-green-100 text-green-800 border-green-200 shadow-green-100/50",
+    "In Use": "bg-blue-100 text-blue-800 border-blue-200 shadow-blue-100/50",
+    "Reserved": "bg-yellow-100 text-yellow-800 border-yellow-200 shadow-yellow-100/50",
+    "Maintenance": "bg-red-100 text-red-800 border-red-200 shadow-red-100/50"
   }
 
   return (
-    <div className="bg-card p-6 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="group relative bg-gradient-to-br from-white via-gray-50/30 to-gray-100/20 p-6 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 hover:scale-[1.01] hover:border-gray-300/80"
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+      <div className="relative z-10 flex justify-between items-start">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-primary mb-2">{eq.name}</h3>
-          <div className="flex items-center gap-2 mb-4">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColors[eq.status as keyof typeof statusColors] || "bg-gray-100 text-gray-800 border-gray-200"}`}>
+          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors mb-3">
+            {eq.name}
+          </h3>
+          <div className="flex items-center gap-3 mb-4">
+            <span className={`px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 ${
+              statusColors[eq.status as keyof typeof statusColors] || "bg-gray-100 text-gray-800 border-gray-200 shadow-gray-100/50"
+            }`}>
               {eq.status}
             </span>
+            {isLoading && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-primary"></div>
+                <span>Updating...</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
@@ -143,7 +215,7 @@ const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadin
             value={eq.status}
             onChange={(e) => onStatus(eq.id, e.target.value)}
             disabled={isLoading}
-            className="text-sm border-input rounded-md px-2 py-1 bg-background focus:ring-2 focus:ring-ring"
+            className="text-sm border border-gray-200/60 rounded-lg px-3 py-2 bg-white/80 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="Available">Available</option>
             <option value="In Use">In Use</option>
@@ -153,16 +225,33 @@ const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadin
           <button
             onClick={() => onDelete(eq.id)}
             disabled={isLoading}
-            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group/delete"
             title="Delete equipment"
           >
-            Delete
+            <Trash2Icon className="h-4 w-4 group-hover/delete:scale-110 transition-transform" />
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 })
+
+// Enhanced Fleet Card Skeleton
+const FleetCardSkeleton = () => (
+  <div className="relative overflow-hidden bg-gradient-to-br from-white via-gray-50/30 to-gray-100/20 p-6 rounded-xl border border-gray-200/60 shadow-sm">
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
+    <div className="flex justify-between items-start relative z-10">
+      <div className="flex-1">
+        <Skeleton className="h-6 w-32 mb-3" />
+        <Skeleton className="h-5 w-20 mb-4" />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="h-8 w-8 rounded-lg" />
+      </div>
+    </div>
+  </div>
+)
 
 // Custom hook for data fetching with React Query patterns
 const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected' | 'connecting') => void) => {
@@ -965,6 +1054,7 @@ const DashboardContent = ({
   const getActionLoadingId = (): string | null | undefined => actionLoadingId || undefined
 
   const tabOptions = [
+    { key: "home", label: "Home" },
     { key: "dashboard", label: "Dashboard" },
     { key: "requests", label: "Requests" },
     { key: "fleet", label: "Fleet" },
@@ -996,6 +1086,13 @@ const DashboardContent = ({
 
   const handleTabChange = useCallback((value: string) => {
     if (tab === value) return; // Prevent unnecessary updates
+    
+    if (value === 'home') {
+      // Navigate to home page
+      window.location.href = '/'
+      return
+    }
+    
     setTab(value);
     // Use pushState instead of router.replace for instant navigation
     const url = new URL(window.location.href);
@@ -1011,7 +1108,7 @@ const DashboardContent = ({
         return;
       }
 
-      const tabOrder = ['dashboard', 'requests', 'fleet', 'settings'];
+      const tabOrder = ['home', 'dashboard', 'requests', 'fleet', 'settings'];
       const currentIndex = tabOrder.indexOf(tab);
       
       switch (event.key) {
@@ -1026,6 +1123,11 @@ const DashboardContent = ({
           event.preventDefault();
           const prevIndex = currentIndex === 0 ? tabOrder.length - 1 : currentIndex - 1;
           handleTabChange(tabOrder[prevIndex]);
+          break;
+        case 'h':
+        case 'H':
+          event.preventDefault();
+          handleTabChange('home');
           break;
         case '1':
           event.preventDefault();
@@ -1056,8 +1158,8 @@ const DashboardContent = ({
       case 'dashboard':
         return (
           <TabContent tabKey="dashboard">
-            <div className="max-w-7xl w-full mx-auto px-4 pb-12">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
+              <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 {loading ? (
                   <>
                     <DashboardCardSkeleton />
@@ -1067,46 +1169,30 @@ const DashboardContent = ({
                   </>
                 ) : (
                   <>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Rentals</CardTitle>
-                        <Truck className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{dashboardStats.activeRentals}</div>
-                        <p className="text-xs text-muted-foreground">Currently rented equipment</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Fleet Available</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{dashboardStats.fleetAvailable}</div>
-                        <p className="text-xs text-muted-foreground">Ready for rental</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Fleet In Use</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{dashboardStats.fleetInUse}</div>
-                        <p className="text-xs text-muted-foreground">Currently in use</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{dashboardStats.pendingRequests}</div>
-                        <p className="text-xs text-muted-foreground">Awaiting approval</p>
-                      </CardContent>
-                    </Card>
+                    <DashboardCard
+                      title="Active Rentals"
+                      value={dashboardStats.activeRentals}
+                      icon={Truck}
+                      description="Currently rented equipment"
+                    />
+                    <DashboardCard
+                      title="Fleet Available"
+                      value={dashboardStats.fleetAvailable}
+                      icon={CheckCircle}
+                      description="Ready for rental"
+                    />
+                    <DashboardCard
+                      title="Fleet In Use"
+                      value={dashboardStats.fleetInUse}
+                      icon={Clock}
+                      description="Currently in use"
+                    />
+                    <DashboardCard
+                      title="Pending Requests"
+                      value={dashboardStats.pendingRequests}
+                      icon={AlertCircle}
+                      description="Awaiting approval"
+                    />
                   </>
                 )}
               </div>
@@ -1117,31 +1203,41 @@ const DashboardContent = ({
       case 'requests':
         return (
           <TabContent tabKey="requests">
-            <div className="max-w-7xl w-full mx-auto px-4 pb-12">
+            <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
               {/* Header Section */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Rental Requests</h2>
-                    <p className="text-muted-foreground">
-                      Manage and track all rental requests in the system
+              <div className="mb-8">
+                <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
+                        Rental Requests
+                      </h2>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          realtimeStatus === 'connected' ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/50' :
+                          realtimeStatus === 'connecting' ? 'bg-yellow-500 animate-pulse shadow-lg shadow-yellow-500/50' :
+                          'bg-red-500 shadow-lg shadow-red-500/50'
+                        }`} />
+                        <span className={`text-sm font-medium ${
+                          realtimeStatus === 'connected' ? 'text-green-600' :
+                          realtimeStatus === 'connecting' ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {realtimeStatus === 'connected' ? 'Live' :
+                           realtimeStatus === 'connecting' ? 'Connecting' :
+                           'Disconnected'}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
+                      Manage and track all rental requests in the system with real-time updates and comprehensive controls
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-xs">
-                      <div className={`w-2 h-2 rounded-full ${
-                        realtimeStatus === 'connected' ? 'bg-green-500 animate-pulse' :
-                        realtimeStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
-                        'bg-red-500'
-                      }`} />
-                      <span className={`${
-                        realtimeStatus === 'connected' ? 'text-green-600' :
-                        realtimeStatus === 'connecting' ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`}>
-                        {realtimeStatus === 'connected' ? 'Live' :
-                         realtimeStatus === 'connecting' ? 'Connecting' :
-                         'Disconnected'}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs bg-gray-50/80 px-3 py-2 rounded-lg border border-gray-200/60">
+                      <span className="text-gray-600">Last updated:</span>
+                      <span className="font-medium text-gray-900">
+                        {lastFetch.toLocaleTimeString()}
                       </span>
                     </div>
                     <Button
@@ -1149,8 +1245,9 @@ const DashboardContent = ({
                       size="sm"
                       onClick={() => debouncedFetch(true)}
                       disabled={loading && !getActionLoadingId()}
+                      className="h-10 md:h-9 gap-2 hover:bg-primary/5 hover:border-primary/30 transition-all duration-200"
                     >
-                      <RefreshCwIcon className="h-4 w-4 mr-2" />
+                      <RefreshCwIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                       Refresh
                     </Button>
                   </div>
@@ -1200,27 +1297,27 @@ const DashboardContent = ({
                   </DialogHeader>
                   {deleteDialog.row && (
                     <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                         <div><span className="font-medium">ID:</span> {deleteDialog.row.id}</div>
                         <div><span className="font-medium">Status:</span> 
                           <Badge variant="outline" className="ml-1">{deleteDialog.row.status}</Badge>
                         </div>
                         <div><span className="font-medium">Equipment:</span> {deleteDialog.row.equipment}</div>
                         <div><span className="font-medium">Requester:</span> {deleteDialog.row.requester}</div>
-                        <div className="col-span-2">
+                        <div className="md:col-span-2">
                           <span className="font-medium">Date:</span> {new Date(deleteDialog.row.date).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
                   )}
                   <DialogFooter className="gap-2">
-                    <Button variant="outline" onClick={handleDirectDeleteCancel}>
+                    <Button variant="outline" onClick={handleDirectDeleteCancel} className="h-10 md:h-9">
                       Cancel
                     </Button>
                     <Button 
                       variant="destructive" 
                       onClick={handleDirectDeleteConfirm}
-                      className="gap-2"
+                      className="gap-2 h-10 md:h-9"
                     >
                       <Trash2Icon className="h-4 w-4" />
                       Delete Request
@@ -1241,7 +1338,7 @@ const DashboardContent = ({
                   <div className="space-y-4">
                     {requests.filter(r => r.id === detailsId).map(r => (
                       <div key={r.id} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">Equipment:</span>
@@ -1291,7 +1388,7 @@ const DashboardContent = ({
                     ))}
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setDetailsId(null)}>
+                    <Button variant="outline" onClick={() => setDetailsId(null)} className="h-10 md:h-9">
                       Close
                     </Button>
                   </DialogFooter>
@@ -1304,7 +1401,7 @@ const DashboardContent = ({
       case 'fleet':
         return (
           <TabContent tabKey="fleet">
-            <div className="max-w-7xl w-full mx-auto px-4 pb-12">
+            <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
               <div className="space-y-4">
                 {loading ? (
                   <>
@@ -1346,10 +1443,10 @@ const DashboardContent = ({
       case 'settings':
         return (
           <TabContent tabKey="settings">
-            <div className="max-w-xl mx-auto px-4 pb-12">
-              <div className="bg-card p-8 rounded-xl border border-border">
-                <h2 className="text-xl font-bold mb-4 text-primary">Settings</h2>
-                <div className="text-muted-foreground">More settings coming soon...</div>
+            <div className="max-w-xl mx-auto px-4 md:px-6 pb-12">
+              <div className="bg-card p-6 md:p-8 rounded-xl border border-border">
+                <h2 className="text-lg md:text-xl font-bold mb-4 text-primary">Settings</h2>
+                <div className="text-muted-foreground text-sm md:text-base">More settings coming soon...</div>
               </div>
             </div>
           </TabContent>
@@ -1410,9 +1507,6 @@ const TabContent = React.memo(({ children, tabKey }: { children: React.ReactNode
 ))
 
 export default function Page() {
-  const [user, setUser] = useState<any>(null)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
   const [auditLog, setAuditLog] = useState<any[]>([])
   const [expandedLog, setExpandedLog] = useState<string | null>(null)
@@ -1425,19 +1519,21 @@ export default function Page() {
   const [auditLogLoaded, setAuditLogLoaded] = useState(false);
 
   const router = useRouter()
+  const { user, loading: authLoading, isAdmin, isAuthenticated } = useAuth()
 
+  // Redirect if not authenticated or not admin
   useEffect(() => {
-    getSupabaseClient().auth.getUser().then(({ data }) => {
-      const isAdmin = !!data.user && data.user.user_metadata?.role === "admin"
-      setIsAdmin(isAdmin)
-      setAuthChecked(true)
-      if (!isAdmin) {
+    if (!authLoading) {
+      if (!isAuthenticated) {
         router.replace("/login")
+      } else if (!isAdmin) {
+        router.replace("/")
       }
-    })
-  }, [])
+    }
+  }, [authLoading, isAuthenticated, isAdmin, router])
 
-  async function fetchAuditLog() {
+  // Memoized audit log fetch function
+  const fetchAuditLog = useCallback(async () => {
     if (auditLogLoaded) return; // Skip if already loaded
     
     try {
@@ -1454,7 +1550,7 @@ export default function Page() {
     } catch (error) {
       console.error('Failed to load audit log:', error)
     }
-  }
+  }, [auditLogLoaded])
 
   // Validate service availability
   if (!RentalRequestService) {
@@ -1492,11 +1588,20 @@ export default function Page() {
     )
   }
 
-  if (!authChecked) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <span className="text-lg">Loading dashboard...</span>
+        </div>
+      </div>
+    )
   }
 
-  if (!isAdmin) {
+  // Don't render if not authenticated or not admin
+  if (!isAuthenticated || !isAdmin) {
     return null
   }
 

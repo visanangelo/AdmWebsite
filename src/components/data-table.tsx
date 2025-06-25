@@ -92,6 +92,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { ActionButtons } from './ActionButtons'
 import { RentalRequest, FleetItem } from '@/types/rental'
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // Rename local Row interface to RentalRow
 interface RentalRow {
@@ -263,6 +264,7 @@ const DataTableToolbar = React.memo(({
   setGlobalFilter: (v: string) => void
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const isMobile = useIsMobile()
 
   const clearFilters = useCallback(() => {
     setColumnFilters([])
@@ -299,113 +301,121 @@ const DataTableToolbar = React.memo(({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="relative w-full md:w-auto">
+            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search requests..."
               value={globalFilter}
               onChange={(event) => setGlobalFilter(event.target.value)}
-              className="pl-8 w-[300px]"
+              className="pl-10 w-full md:w-[300px] h-10 md:h-9"
             />
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={clearFilters}
-            className="h-9"
+            className="h-10 md:h-9 w-full md:w-auto"
           >
-            <X className="h-4 w-4 mr-1" />
-            Clear
+            <X className="h-4 w-4 mr-2" />
+            Clear Filters
           </Button>
         </div>
         
-        <div className="flex items-center space-x-2">
-          {onRefresh && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="h-8 w-8 p-0"
-                  >
-                    <RefreshCwIcon className="h-4 w-4" />
+        <div className="flex items-center justify-between md:justify-end space-x-2">
+          <div className="flex items-center space-x-1">
+            {onRefresh && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation"
+                    >
+                      <RefreshCwIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Refresh Data</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {onExport && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation"
+                    >
+                      <DownloadIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Export Data</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {enableColumnVisibility && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation">
+                    <SettingsIcon className="h-4 w-4" />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>Refresh Data</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {onExport && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    className="h-8 w-8 p-0"
-                  >
-                    <DownloadIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Export Data</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {enableColumnVisibility && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                  <SettingsIcon className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {table.getAllColumns()
-                  .filter((column: any) => column.getCanHide())
-                  .map((column: any) => {
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                      >
-                        {column.id}
-                      </DropdownMenuCheckboxItem>
-                    )
-                  })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          <div className="text-sm text-muted-foreground">
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {table.getAllColumns()
+                    .filter((column: any) => column.getCanHide())
+                    .map((column: any) => {
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={column.id}
+                          className="capitalize"
+                          checked={column.getIsVisible()}
+                          onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                        >
+                          {column.id}
+                        </DropdownMenuCheckboxItem>
+                      )
+                    })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+          <div className="text-sm text-muted-foreground hidden md:block">
             {table.getFilteredRowModel().rows.length} of {table.getCoreRowModel().rows.length} requests
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:space-x-4">
-        <div className="flex items-center space-x-2">
+      
+      {/* Mobile summary */}
+      <div className="md:hidden text-sm text-muted-foreground text-center">
+        {table.getFilteredRowModel().rows.length} of {table.getCoreRowModel().rows.length} requests
+      </div>
+      
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:space-x-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:space-x-2">
           <Label htmlFor="dateFrom" className="text-sm font-medium">Date From:</Label>
           <Input
             id="dateFrom"
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="w-[150px]"
+            className="w-full md:w-[150px] h-10"
           />
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:space-x-2">
           <Label htmlFor="dateTo" className="text-sm font-medium">Date To:</Label>
           <Input
             id="dateTo"
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="w-[150px]"
+            className="w-full md:w-[150px] h-10"
           />
         </div>
       </div>
@@ -438,13 +448,15 @@ function SortableHeader({ column, children }: { column: any; children: React.Rea
 // Pagination Component
 function DataTablePagination({ table, pagination, setPagination }: { table: any, pagination: { pageIndex: number, pageSize: number }, setPagination: (p: { pageIndex: number, pageSize: number }) => void }) {
   const [open, setOpen] = React.useState(false);
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="flex items-center justify-between px-2 py-4">
-      <div className="flex-1 text-sm text-muted-foreground">
+    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-2 py-4">
+      <div className="flex-1 text-sm text-muted-foreground text-center md:text-left">
         Page {pagination.pageIndex + 1} of {table.getPageCount()}
       </div>
-      <div className="flex items-center space-x-6 lg:space-x-8">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:space-x-6 lg:space-x-8">
+        <div className="flex items-center justify-center md:justify-start space-x-2">
           <p className="text-sm font-medium">Rows per page</p>
           <Select
             open={open}
@@ -455,7 +467,7 @@ function DataTablePagination({ table, pagination, setPagination }: { table: any,
               setOpen(false);
             }}
           >
-            <SelectTrigger className="h-8 w-[70px]">
+            <SelectTrigger className="h-10 md:h-8 w-[80px] md:w-[70px]">
               <SelectValue>{pagination.pageSize}</SelectValue>
             </SelectTrigger>
             <SelectContent side="top">
@@ -467,13 +479,13 @@ function DataTablePagination({ table, pagination, setPagination }: { table: any,
             </SelectContent>
           </Select>
         </div>
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+        <div className="flex w-full md:w-[100px] items-center justify-center text-sm font-medium">
           Page {pagination.pageIndex + 1} of {table.getPageCount()}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-center md:justify-start space-x-2">
           <Button
             variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
+            className="hidden h-10 w-10 md:h-8 md:w-8 p-0 lg:flex touch-manipulation"
             onClick={() => setPagination({ ...pagination, pageIndex: 0 })}
             disabled={pagination.pageIndex === 0}
           >
@@ -482,7 +494,7 @@ function DataTablePagination({ table, pagination, setPagination }: { table: any,
           </Button>
           <Button
             variant="outline"
-            className="h-8 w-8 p-0"
+            className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation"
             onClick={() => setPagination({ ...pagination, pageIndex: Math.max(0, pagination.pageIndex - 1) })}
             disabled={pagination.pageIndex === 0}
           >
@@ -491,7 +503,7 @@ function DataTablePagination({ table, pagination, setPagination }: { table: any,
           </Button>
           <Button
             variant="outline"
-            className="h-8 w-8 p-0"
+            className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation"
             onClick={() => setPagination({ ...pagination, pageIndex: Math.min(table.getPageCount() - 1, pagination.pageIndex + 1) })}
             disabled={pagination.pageIndex >= table.getPageCount() - 1}
           >
@@ -500,7 +512,7 @@ function DataTablePagination({ table, pagination, setPagination }: { table: any,
           </Button>
           <Button
             variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
+            className="hidden h-10 w-10 md:h-8 md:w-8 p-0 lg:flex touch-manipulation"
             onClick={() => setPagination({ ...pagination, pageIndex: table.getPageCount() - 1 })}
             disabled={pagination.pageIndex >= table.getPageCount() - 1}
           >
@@ -714,6 +726,7 @@ export function DataTable({
       ),
       enableSorting: false,
       enableHiding: false,
+      size: 40,
     },
     {
       accessorKey: "id",
@@ -753,7 +766,7 @@ export function DataTable({
       accessorKey: "requester",
       header: ({ column }) => <SortableHeader column={column}>Requester</SortableHeader>,
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => (
-        <span className="font-medium">{row.getValue("requester")}</span>
+        <span className="font-medium text-sm md:text-base">{row.getValue("requester")}</span>
       ),
       size: 150,
     },
@@ -761,7 +774,7 @@ export function DataTable({
       accessorKey: "equipment",
       header: ({ column }) => <SortableHeader column={column}>Equipment</SortableHeader>,
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => (
-        <span className="font-medium">{row.getValue("equipment")}</span>
+        <span className="font-medium text-sm md:text-base">{row.getValue("equipment")}</span>
       ),
       size: 180,
     },
@@ -783,7 +796,7 @@ export function DataTable({
         return (
           <Badge
             variant={variant}
-            className={`whitespace-nowrap font-medium ${extraClass}`}
+            className={`whitespace-nowrap font-medium text-xs md:text-sm ${extraClass}`}
           >
             {status}
           </Badge>
@@ -797,7 +810,7 @@ export function DataTable({
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => {
         const notes = row.getValue("notes") as string;
         return (
-          <span className="max-w-[200px] truncate text-sm text-muted-foreground" title={notes}>
+          <span className="max-w-[150px] md:max-w-[200px] truncate text-xs md:text-sm text-muted-foreground" title={notes}>
             {notes || '-'}
           </span>
         );
@@ -818,10 +831,10 @@ export function DataTable({
               actionLoadingId={actionLoadingId}
             />
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 md:h-8 md:w-8 p-0 touch-manipulation">
                     <MoreVerticalIcon className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -976,79 +989,82 @@ export function DataTable({
         />
       )}
       
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getPaginationRowModel().rows?.length ? (
-              table.getPaginationRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-muted/50 transition-colors"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+      <div className="rounded-md border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id} style={{ width: header.getSize() }} className="whitespace-nowrap">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    )
+                  })}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  <div className="flex flex-col items-center space-y-2">
-                    <p className="text-muted-foreground">
-                      {table.getFilteredRowModel().rows.length === 0 && table.getCoreRowModel().rows.length > 0
-                        ? "No results found for your search."
-                        : "No rental requests found."}
-                    </p>
-                    {table.getFilteredRowModel().rows.length === 0 && table.getCoreRowModel().rows.length > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          table.resetColumnFilters()
-                          table.setGlobalFilter("")
-                        }}
-                      >
-                        Clear filters
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getPaginationRowModel().rows?.length ? (
+                table.getPaginationRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className="hover:bg-muted/50 transition-colors"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="whitespace-nowrap">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    <div className="flex flex-col items-center space-y-2">
+                      <p className="text-muted-foreground text-sm md:text-base">
+                        {table.getFilteredRowModel().rows.length === 0 && table.getCoreRowModel().rows.length > 0
+                          ? "No results found for your search."
+                          : "No rental requests found."}
+                      </p>
+                      {table.getFilteredRowModel().rows.length === 0 && table.getCoreRowModel().rows.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            table.resetColumnFilters()
+                            table.setGlobalFilter("")
+                          }}
+                          className="h-10 md:h-9"
+                        >
+                          Clear filters
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Page summary */}
       {enablePagination && (
-        <div className="flex justify-end text-sm text-muted-foreground px-2">
+        <div className="flex justify-center md:justify-end text-sm text-muted-foreground px-2">
           {(() => {
             const total = table.getFilteredRowModel().rows.length;
             const pageIndex = pagination.pageIndex;
