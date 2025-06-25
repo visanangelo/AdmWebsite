@@ -23,7 +23,7 @@ interface RequestsTabProps {
   onComplete: (id: string) => Promise<void>
   onReopen: (id: string) => Promise<void>
   onCancel: (id: string) => Promise<void>
-  onViewDetails: (id: string) => void
+  onViewDetails: (id: string) => Promise<void>
   onBulkApprove: (ids: string[]) => Promise<void>
   onBulkDecline: (ids: string[]) => Promise<void>
   onBulkDelete: (ids: string[]) => Promise<void>
@@ -147,9 +147,11 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                 <div><span className="font-medium">ID:</span> {deleteDialog.row.id}</div>
                 <div><span className="font-medium">Status:</span> 
-                  <Badge variant="outline" className="ml-1">{deleteDialog.row.status}</Badge>
+                  <Badge variant="outline" className="ml-1">
+                    {deleteDialog.row.status || 'Unknown'}
+                  </Badge>
                 </div>
-                <div><span className="font-medium">Equipment:</span> {deleteDialog.row.equipment}</div>
+                <div><span className="font-medium">Equipment:</span> {typeof deleteDialog.row.equipment === 'string' ? deleteDialog.row.equipment : deleteDialog.row.equipment?.name || 'Unknown'}</div>
                 <div><span className="font-medium">Requester:</span> {deleteDialog.row.requester}</div>
                 <div className="md:col-span-2">
                   <span className="font-medium">Date:</span> {deleteDialog.row.date ? new Date(deleteDialog.row.date).toLocaleDateString() : 'N/A'}
@@ -181,6 +183,9 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
               <EyeIcon className="h-5 w-5" />
               Rental Request Details
             </DialogTitle>
+            <DialogDescription>
+              View detailed information about this rental request including status, equipment, and requester details.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {requests.filter(r => r.id === detailsId).map(r => (
@@ -188,9 +193,11 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div><span className="font-medium">ID:</span> {r.id}</div>
                   <div><span className="font-medium">Status:</span> 
-                    <Badge variant="outline" className="ml-1">{r.status}</Badge>
+                    <Badge variant="outline" className="ml-1">
+                      {r.status || 'Unknown'}
+                    </Badge>
                   </div>
-                  <div><span className="font-medium">Equipment:</span> {r.equipment}</div>
+                  <div><span className="font-medium">Equipment:</span> {typeof r.equipment === 'string' ? r.equipment : r.equipment?.name || 'Unknown'}</div>
                   <div><span className="font-medium">Requester:</span> {r.requester}</div>
                   <div className="md:col-span-2">
                     <span className="font-medium">Date:</span> {r.date ? new Date(r.date).toLocaleDateString() : 'N/A'}

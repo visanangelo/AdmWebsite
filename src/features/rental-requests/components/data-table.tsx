@@ -106,6 +106,7 @@ interface RentalRow {
   notes?: string
   start_date?: string
   end_date?: string
+  project_location?: string
   [key: string]: any
 }
 
@@ -238,13 +239,206 @@ function BulkActions({
   )
 }
 
-// DataTable Toolbar Component - Memoized for better performance
-const DataTableToolbar = React.memo(({ 
+// Mobile Card View Component
+function MobileCardView({ 
+  data, 
+  onAction, 
+  actionLoadingId,
+  onViewDetails 
+}: { 
+  data: RentalRow[]
+  onAction: (action: string, id: string) => Promise<void>
+  actionLoadingId?: string | null
+  onViewDetails?: (id: string) => Promise<void>
+}) {
+  return (
+    <div className="space-y-3 md:hidden">
+      {data.map((row) => {
+        const isLoading = actionLoadingId === row.id;
+        
+        return (
+          <div key={row.id} className="bg-card rounded-lg border p-4 space-y-3">
+            {/* Header with ID and Status */}
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-sm font-medium text-muted-foreground">#{row.id}</span>
+              <Badge variant={getStatusVariant(row.status)} className="text-xs">
+                {row.status}
+              </Badge>
+            </div>
+            
+            {/* Main Info */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Requester:</span>
+                <span className="text-sm">{row.requester}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Equipment:</span>
+                <span className="text-sm">{row.equipment}</span>
+              </div>
+              {row.start_date && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Start:</span>
+                  <span className="text-sm">{new Date(row.start_date).toLocaleDateString()}</span>
+                </div>
+              )}
+              {row.end_date && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">End:</span>
+                  <span className="text-sm">{new Date(row.end_date).toLocaleDateString()}</span>
+                </div>
+              )}
+              {row.project_location && (
+                <div className="flex items-start gap-2">
+                  <span className="text-sm font-medium">Location:</span>
+                  <span className="text-sm text-muted-foreground">{row.project_location}</span>
+                </div>
+              )}
+              {row.notes && (
+                <div className="flex items-start gap-2">
+                  <span className="text-sm font-medium">Notes:</span>
+                  <span className="text-sm text-muted-foreground line-clamp-2">{row.notes}</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Quick Action Buttons */}
+            <div className="flex flex-wrap gap-2 pt-2 border-t">
+              {/* Primary Actions based on status */}
+              {row.status === 'Pending' && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAction('Approve', row.id)}
+                    disabled={isLoading}
+                    className="flex-1 h-9 bg-green-50 hover:bg-green-100 border-green-200 text-green-800"
+                  >
+                    <CheckCircleIcon className="h-4 w-4 mr-1" />
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAction('Decline', row.id)}
+                    disabled={isLoading}
+                    className="flex-1 h-9 bg-red-50 hover:bg-red-100 border-red-200 text-red-800"
+                  >
+                    <XCircleIcon className="h-4 w-4 mr-1" />
+                    Decline
+                  </Button>
+                </>
+              )}
+              
+              {row.status === 'Approved' && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAction('Complete', row.id)}
+                    disabled={isLoading}
+                    className="flex-1 h-9 bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800"
+                  >
+                    <CheckCircleIcon className="h-4 w-4 mr-1" />
+                    Complete
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAction('Cancel', row.id)}
+                    disabled={isLoading}
+                    className="flex-1 h-9 bg-red-50 hover:bg-red-100 border-red-200 text-red-800"
+                  >
+                    <BanIcon className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                </>
+              )}
+              
+              {(row.status === 'Completed' || row.status === 'Cancelled' || row.status === 'Declined') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onAction('Reopen', row.id)}
+                  disabled={isLoading}
+                  className="flex-1 h-9 bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-800"
+                >
+                  <RotateCcwIcon className="h-4 w-4 mr-1" />
+                  Reopen
+                </Button>
+              )}
+              
+              {/* View Details Button */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onViewDetails?.(row.id)}
+                className="flex-1 h-9"
+              >
+                <EyeIcon className="h-4 w-4 mr-1" />
+                View
+              </Button>
+            </div>
+            
+            {/* Secondary Actions Dropdown */}
+            <div className="flex justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 w-full">
+                    <MoreVerticalIcon className="h-4 w-4 mr-2" />
+                    More Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => onViewDetails?.(row.id)}>
+                    <EyeIcon className="mr-2 h-4 w-4" />
+                    View Details
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => onAction('Edit', row.id)}>
+                    <EditIcon className="mr-2 h-4 w-4" />
+                    Edit Request
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => onAction('Reminder', row.id)}>
+                    <AlertCircleIcon className="mr-2 h-4 w-4" />
+                    Send Reminder
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem 
+                    onClick={() => onAction('Delete', row.id)}
+                    className="bg-red-100 text-red-800 focus:bg-red-200 focus:text-red-800"
+                  >
+                    <Trash2Icon className="mr-2 h-4 w-4" />
+                    Delete Request
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="flex items-center justify-center gap-2 p-2 bg-blue-50 rounded-lg">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                <span className="text-sm text-blue-700">Processing...</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  )
+}
+
+// Enhanced Toolbar with Mobile Responsiveness
+function DataTableToolbar({ 
   table, 
-  onRefresh, 
-  onExport, 
+  onRefresh,
+  onExport,
   data,
-  enableColumnVisibility = true,
+  enableColumnVisibility,
   columnFilters,
   setColumnFilters,
   dateFrom,
@@ -255,221 +449,201 @@ const DataTableToolbar = React.memo(({
   setGlobalFilter,
   onFilterByUser,
   onFilterByEquipment,
-  onClearIndexedFilters
-}: { 
+  onClearIndexedFilters,
+}: {
   table: any
   onRefresh?: () => Promise<void>
   onExport?: (data: RentalRow[]) => void
   data: RentalRow[]
-  enableColumnVisibility?: boolean
-  columnFilters: ColumnFiltersState
-  setColumnFilters: React.Dispatch<React.SetStateAction<ColumnFiltersState>>
+  enableColumnVisibility: boolean
+  columnFilters: any[]
+  setColumnFilters: (filters: any[]) => void
   dateFrom: string
-  setDateFrom: (v: string) => void
+  setDateFrom: (date: string) => void
   dateTo: string
-  setDateTo: (v: string) => void
+  setDateTo: (date: string) => void
   globalFilter: string
-  setGlobalFilter: (v: string) => void
+  setGlobalFilter: (filter: string) => void
   onFilterByUser?: (userId: string) => Promise<void>
   onFilterByEquipment?: (equipmentId: string) => Promise<void>
   onClearIndexedFilters?: () => Promise<void>
-}) => {
-  const [isRefreshing, setIsRefreshing] = useState(false)
+}) {
   const isMobile = useIsMobile()
-
-  // Helper function to detect if search is for a user ID or equipment ID
-  const detectSearchType = (searchTerm: string) => {
-    // UUID pattern for user/equipment IDs
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (uuidPattern.test(searchTerm)) {
-      // Check if it's a user ID by looking at the data
-      const isUserId = data.some(row => row.user_id === searchTerm)
-      const isEquipmentId = data.some(row => row.equipment_id === searchTerm)
-      
-      if (isUserId) return 'user'
-      if (isEquipmentId) return 'equipment'
-    }
-    return 'text'
-  }
-
-  const clearFilters = useCallback(async () => {
-    setColumnFilters([])
-    table.setGlobalFilter("")
-    setDateFrom("")
-    setDateTo("")
-    
-    // Clear indexed filters if available
-    if (onClearIndexedFilters) {
-      await onClearIndexedFilters()
-    }
-  }, [setColumnFilters, table, setDateFrom, setDateTo, onClearIndexedFilters])
-
-  const handleSearchChange = useCallback(async (searchTerm: string) => {
-    setGlobalFilter(searchTerm)
-    
-    // If search term looks like a UUID and we have indexed filtering available
-    if (searchTerm.trim()) {
-      const searchType = detectSearchType(searchTerm.trim())
-      
-      if (searchType === 'user' && onFilterByUser) {
-        await onFilterByUser(searchTerm.trim())
-      } else if (searchType === 'equipment' && onFilterByEquipment) {
-        await onFilterByEquipment(searchTerm.trim())
-      }
-    }
-  }, [setGlobalFilter, onFilterByUser, onFilterByEquipment, data])
-
-  useEffect(() => {
-    if (dateFrom || dateTo) {
-      setColumnFilters((prev) => [
-        ...prev.filter((f: any) => f.id !== "start_date"),
-        { id: "start_date", value: { from: dateFrom ? new Date(dateFrom) : undefined, to: dateTo ? new Date(dateTo) : undefined } }
-      ])
-    } else {
-      setColumnFilters((prev) => prev.filter((f: any) => f.id !== "start_date"))
-    }
-  }, [dateFrom, dateTo, setColumnFilters])
-
-  const handleRefresh = useCallback(async () => {
-    if (!onRefresh) return
-    setIsRefreshing(true)
-    try {
-      await onRefresh()
-    } finally {
-      setIsRefreshing(false)
-    }
-  }, [onRefresh])
-
-  const handleExport = useCallback(() => {
-    if (!onExport) return
-    onExport(data)
-  }, [onExport, data])
+  const [showFilters, setShowFilters] = useState(false)
 
   return (
     <div className="space-y-4">
+      {/* Main Toolbar */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <div className="relative w-full md:w-auto">
+        {/* Search and Filters */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4 flex-1">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-sm">
             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search requests... (or enter User/Equipment ID for indexed search)"
-              value={globalFilter}
-              onChange={(event) => handleSearchChange(event.target.value)}
-              className="pl-10 w-full md:w-[300px] h-10 md:h-9"
+              placeholder="Search requests..."
+              value={globalFilter ?? ""}
+              onChange={(event) => setGlobalFilter(event.target.value)}
+              className="pl-10 h-10 md:h-9"
             />
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearFilters}
-            className="h-10 md:h-9 w-full md:w-auto"
-          >
-            <X className="h-4 w-4 mr-2" />
-            Clear Filters
-          </Button>
+          
+          {/* Mobile Filter Toggle */}
+          {isMobile && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="h-10 md:h-9"
+            >
+              <FilterIcon className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+          )}
         </div>
         
-        <div className="flex items-center justify-between md:justify-end space-x-2">
-          <div className="flex items-center space-x-1">
-            {onRefresh && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRefresh}
-                      disabled={isRefreshing}
-                      className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation"
-                    >
-                      <RefreshCwIcon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Refresh Data</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            {onExport && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExport}
-                      className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation"
-                    >
-                      <DownloadIcon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Export Data</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            {enableColumnVisibility && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation">
-                    <SettingsIcon className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  {table.getAllColumns()
-                    .filter((column: any) => column.getCanHide())
-                    .map((column: any) => {
-                      return (
-                        <DropdownMenuCheckboxItem
-                          key={column.id}
-                          className="capitalize"
-                          checked={column.getIsVisible()}
-                          onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                        >
-                          {column.id}
-                        </DropdownMenuCheckboxItem>
-                      )
-                    })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-          <div className="text-sm text-muted-foreground hidden md:block">
-            {table.getFilteredRowModel().rows.length} of {table.getCoreRowModel().rows.length} requests
-          </div>
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {onRefresh && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              className="h-10 md:h-9"
+            >
+              <RefreshCwIcon className="h-4 w-4" />
+              <span className="hidden md:inline ml-2">Refresh</span>
+            </Button>
+          )}
+          
+          {onExport && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onExport(data)}
+              className="h-10 md:h-9"
+            >
+              <DownloadIcon className="h-4 w-4" />
+              <span className="hidden md:inline ml-2">Export</span>
+            </Button>
+          )}
+          
+          {enableColumnVisibility && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-10 md:h-9">
+                  <SettingsIcon className="h-4 w-4" />
+                  <span className="hidden md:inline ml-2">Columns</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table.getAllColumns()
+                  .filter((column: any) => column.getCanHide())
+                  .map((column: any) => {
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                      >
+                        {column.id}
+                      </DropdownMenuCheckboxItem>
+                    )
+                  })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
       
-      {/* Mobile summary */}
-      <div className="md:hidden text-sm text-muted-foreground text-center">
-        {table.getFilteredRowModel().rows.length} of {table.getCoreRowModel().rows.length} requests
-      </div>
+      {/* Mobile Filters Panel */}
+      {isMobile && showFilters && (
+        <div className="bg-muted/50 rounded-lg p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-medium">From Date</Label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-medium">To Date</Label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+          </div>
+          
+          {onClearIndexedFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClearIndexedFilters}
+              className="w-full h-9"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      )}
       
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:space-x-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:space-x-2">
-          <Label htmlFor="dateFrom" className="text-sm font-medium">Date From:</Label>
-          <Input
-            id="dateFrom"
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="w-full md:w-[150px] h-10"
-          />
+      {/* Desktop Filters */}
+      {!isMobile && (
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium">From:</Label>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-9 w-40"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium">To:</Label>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-9 w-40"
+            />
+          </div>
+          {onClearIndexedFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClearIndexedFilters}
+              className="h-9"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear Filters
+            </Button>
+          )}
         </div>
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:space-x-2">
-          <Label htmlFor="dateTo" className="text-sm font-medium">Date To:</Label>
-          <Input
-            id="dateTo"
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="w-full md:w-[150px] h-10"
-          />
-        </div>
-      </div>
+      )}
     </div>
   )
-})
+}
 
-DataTableToolbar.displayName = 'DataTableToolbar'
+// Helper function for status variants
+function getStatusVariant(status: string) {
+  switch (status) {
+    case 'Pending': return 'yellow'
+    case 'Approved': return 'default'
+    case 'Declined': return 'destructive'
+    case 'Completed': return 'green'
+    case 'Cancelled': return 'outline'
+    default: return 'outline'
+  }
+}
 
 // Sortable header component
 function SortableHeader({ column, children }: { column: any; children: React.ReactNode }) {
@@ -964,28 +1138,10 @@ export function DataTable({
   // Enhanced loading state
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-[300px]" />
-          <Skeleton className="h-10 w-[200px]" />
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {Array.from({ length: columns.length }).map((_, index) => (
-                  <TableHead key={index}>
-                    <Skeleton className="h-4 w-full" />
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from({ length: 5 }).map((_, index) => (
-                <TableRowSkeleton key={index} columns={columns.length} />
-              ))}
-            </TableBody>
-          </Table>
+      <div className="flex items-center justify-center min-h-[200px] w-full">
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/20 border-t-primary" />
+          <span className="text-sm text-muted-foreground">Loading rental requests...</span>
         </div>
       </div>
     )
@@ -1041,7 +1197,8 @@ export function DataTable({
         />
       )}
       
-      <div className="rounded-md border bg-card overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-md border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -1113,6 +1270,14 @@ export function DataTable({
           </Table>
         </div>
       </div>
+
+      {/* Mobile Card View */}
+      <MobileCardView 
+        data={table.getPaginationRowModel().rows.map(row => row.original)}
+        onAction={handleQuickAction}
+        actionLoadingId={actionLoadingId}
+        onViewDetails={handleViewDetails}
+      />
 
       {/* Page summary */}
       {enablePagination && (

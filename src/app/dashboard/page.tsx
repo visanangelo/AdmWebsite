@@ -28,9 +28,6 @@ import SupabaseProvider from '@/features/shared/components/SupabaseProvider'
 import { DashboardCard, DashboardCardSkeleton, FleetCard, FleetCardSkeleton } from "@/features/dashboard"
 import { useDashboardData } from "@/features/dashboard"
 
-// Force dynamic rendering to prevent build-time errors
-export const dynamic = 'force-dynamic'
-
 // Lazy load tab components for better performance
 const DashboardTab = lazy(() => import('./tabs/DashboardTab'))
 const RequestsTab = lazy(() => import('./tabs/RequestsTab'))
@@ -123,44 +120,187 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const realtimeSubscriptionsRef = useRef<any[]>([])
   const initializedRef = useRef(false)
+  const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
-  // Cache for better performance
+  // Enhanced cache with background refresh
   const cacheRef = useRef<{
-    requests: { data: RentalRequest[]; timestamp: number; filters: any }
-    fleet: { data: any[]; timestamp: number }
-    stats: { data: any; timestamp: number }
+    requests: { data: RentalRequest[]; timestamp: number; filters: any; stale: boolean }
+    fleet: { data: any[]; timestamp: number; stale: boolean }
+    stats: { data: any; timestamp: number; stale: boolean }
   }>({
-    requests: { data: [], timestamp: 0, filters: null },
-    fleet: { data: [], timestamp: 0 },
-    stats: { data: null, timestamp: 0 }
+    requests: { data: [], timestamp: 0, filters: null, stale: true },
+    fleet: { data: [], timestamp: 0, stale: true },
+    stats: { data: null, timestamp: 0, stale: true }
   })
 
-  const CACHE_DURATION = 30000 // 30 seconds cache
+  // Cache configuration
+  const CACHE_DURATION = 300000 // 5 minutes cache (increased from 60s for better hit rate)
+  const STALE_DURATION = 60000 // 1 minute stale duration
+  const BACKGROUND_REFRESH_DURATION = 30000 // 30 seconds background refresh
 
   // Check if cache is valid
   const isCacheValid = (cacheKey: keyof typeof cacheRef.current) => {
     const cache = cacheRef.current[cacheKey]
-    return Date.now() - cache.timestamp < CACHE_DURATION
+    if (!cache || cache.timestamp === 0) {
+      return false
+    }
+    
+    const isValid = Date.now() - cache.timestamp < CACHE_DURATION && !cache.stale
+    
+    return isValid
   }
 
-  // Check if filters match cache
+  // Check if cache is stale (for background refresh)
+  const isCacheStale = (cacheKey: keyof typeof cacheRef.current) => {
+    const cache = cacheRef.current[cacheKey]
+    if (!cache || cache.timestamp === 0) return true
+    return Date.now() - cache.timestamp > STALE_DURATION
+  }
+
+  // Check if filters match cache - improved logic
   const doFiltersMatch = (currentFilters: any) => {
     const cachedFilters = cacheRef.current.requests.filters
-    if (!cachedFilters || !currentFilters) return false
-    return JSON.stringify(cachedFilters) === JSON.stringify(currentFilters)
+    if (!cachedFilters && !currentFilters) return true // Both null/undefined
+    if (!cachedFilters || !currentFilters) return false // One is null/undefined
+    
+    // Deep comparison for better accuracy
+    const currentKeys = Object.keys(currentFilters).sort()
+    const cachedKeys = Object.keys(cachedFilters).sort()
+    
+    if (currentKeys.length !== cachedKeys.length) return false
+    
+    return currentKeys.every(key => {
+      const currentValue = currentFilters[key]
+      const cachedValue = cachedFilters[key]
+      return currentValue === cachedValue || 
+             (currentValue === null && cachedValue === null) ||
+             (currentValue === undefined && cachedValue === undefined)
+    })
   }
 
-  // Cache invalidation function
-  const invalidateCache = useCallback((cacheKey?: keyof typeof cacheRef.current) => {
+  // Mark cache as stale
+  const markCacheStale = useCallback((cacheKey?: keyof typeof cacheRef.current) => {
     if (cacheKey) {
-      cacheRef.current[cacheKey].timestamp = 0
+      cacheRef.current[cacheKey].stale = true
     } else {
-      // Invalidate all cache
+      // Mark all cache as stale
       Object.keys(cacheRef.current).forEach(key => {
-        cacheRef.current[key as keyof typeof cacheRef.current].timestamp = 0
+        cacheRef.current[key as keyof typeof cacheRef.current].stale = true
       })
     }
   }, [])
+
+  // Cache invalidation function - more selective
+  const invalidateCache = useCallback((cacheKey?: keyof typeof cacheRef.current) => {
+    if (cacheKey) {
+      cacheRef.current[cacheKey].timestamp = 0
+      cacheRef.current[cacheKey].stale = true
+    } else {
+      // Only invalidate requests cache by default (most frequently changing)
+      cacheRef.current.requests.timestamp = 0
+      cacheRef.current.requests.stale = true
+    }
+  }, [])
+
+  // Smart cache invalidation based on action type
+  const invalidateCacheByAction = useCallback((actionType: string) => {
+    switch (actionType) {
+      case 'approve':
+      case 'decline':
+      case 'complete':
+      case 'reopen':
+      case 'cancel':
+        // Only invalidate requests cache for request actions
+        cacheRef.current.requests.timestamp = 0
+        cacheRef.current.requests.stale = true
+        break
+      case 'fleet_status':
+      case 'fleet_delete':
+        // Only invalidate fleet cache for fleet actions
+        cacheRef.current.fleet.timestamp = 0
+        cacheRef.current.fleet.stale = true
+        break
+      default:
+        // For unknown actions, invalidate requests only
+        cacheRef.current.requests.timestamp = 0
+        cacheRef.current.requests.stale = true
+    }
+  }, [])
+
+  // Background prefetch function
+  const backgroundPrefetch = useCallback(async () => {
+    if (loadingRef.current) return
+
+    try {
+      const fetchPromises = []
+      
+      // Only prefetch stale data
+      if (isCacheStale('requests')) {
+        fetchPromises.push(
+          RentalRequestService.fetchRequests(1, 100).then(result => {
+            if (!result.error) {
+              cacheRef.current.requests = {
+                data: result.data || [],
+                timestamp: Date.now(),
+                filters: { ...filters },
+                stale: false
+              }
+              // Update data silently (no loading state)
+              setData(prev => ({ ...prev, requests: result.data || [] }))
+            }
+            return { type: 'requests', data: result.data || [] }
+          }).catch(() => ({ type: 'requests', error: 'Background fetch failed' }))
+        )
+      }
+      
+      if (isCacheStale('fleet')) {
+        fetchPromises.push(
+          RentalRequestService.fetchFleet().then(result => {
+            if (!result.error) {
+              cacheRef.current.fleet = {
+                data: result.data || [],
+                timestamp: Date.now(),
+                stale: false
+              }
+              setData(prev => ({ ...prev, fleet: result.data || [] }))
+            }
+            return { type: 'fleet', data: result.data || [] }
+          }).catch(() => ({ type: 'fleet', error: 'Background fetch failed' }))
+        )
+      }
+      
+      if (isCacheStale('stats')) {
+        fetchPromises.push(
+          RentalRequestService.fetchDashboardStats().then(result => {
+            if (!result.error) {
+              cacheRef.current.stats = {
+                data: result.data,
+                timestamp: Date.now(),
+                stale: false
+              }
+              setData(prev => ({ ...prev, stats: result.data }))
+            }
+            return { type: 'stats', data: result.data }
+          }).catch(() => ({ type: 'stats', error: 'Background fetch failed' }))
+        )
+      }
+      
+      if (fetchPromises.length > 0) {
+        await Promise.allSettled(fetchPromises)
+      }
+    } catch (err) {
+      console.warn('Background prefetch failed:', err)
+    }
+  }, [filters])
+
+  // Setup background prefetch interval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      backgroundPrefetch()
+    }, BACKGROUND_REFRESH_DURATION)
+
+    return () => clearInterval(interval)
+  }, [backgroundPrefetch])
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
     if (loadingRef.current && !isManualRefresh) return
@@ -172,19 +312,31 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
     try {
       // Check cache first (unless manual refresh)
       if (!isManualRefresh) {
+        let hasValidCache = false
+        
         // Check requests cache
         if (isCacheValid('requests') && doFiltersMatch(filters)) {
           setData(prev => ({ ...prev, requests: cacheRef.current.requests.data }))
+          hasValidCache = true
         }
         
         // Check fleet cache
         if (isCacheValid('fleet')) {
           setData(prev => ({ ...prev, fleet: cacheRef.current.fleet.data }))
+          hasValidCache = true
         }
         
         // Check stats cache
         if (isCacheValid('stats')) {
           setData(prev => ({ ...prev, stats: cacheRef.current.stats.data }))
+          hasValidCache = true
+        }
+
+        // If we have valid cache for all data, skip loading state
+        if (hasValidCache && isCacheValid('requests') && isCacheValid('fleet') && isCacheValid('stats')) {
+          setLoading(false)
+          loadingRef.current = false
+          return
         }
       }
       
@@ -207,7 +359,8 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
               cacheRef.current.requests = {
                 data: result.data || [],
                 timestamp: Date.now(),
-                filters: { ...filters }
+                filters: { ...filters },
+                stale: false
               }
               return { type: 'requests', data: result.data || [] }
             }
@@ -223,7 +376,8 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
             if (!result.error) {
               cacheRef.current.fleet = {
                 data: result.data || [],
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                stale: false
               }
               return { type: 'fleet', data: result.data || [] }
             }
@@ -239,7 +393,8 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
             if (!result.error) {
               cacheRef.current.stats = {
                 data: result.data,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                stale: false
               }
               return { type: 'stats', data: result.data }
             }
@@ -291,6 +446,9 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current)
       }
+      if (prefetchTimeoutRef.current) {
+        clearTimeout(prefetchTimeoutRef.current)
+      }
       // Cleanup realtime subscriptions
       realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe())
     }
@@ -320,15 +478,18 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
         cacheRef.current.requests = {
           data: newData.requests,
           timestamp: Date.now(),
-          filters: { ...filters }
+          filters: { ...filters },
+          stale: false
         }
         cacheRef.current.fleet = {
           data: newData.fleet,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          stale: false
         }
         cacheRef.current.stats = {
           data: newData.stats,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          stale: false
         }
         
         setData(newData)
@@ -346,6 +507,60 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
     initializeData()
   }, []) // Empty dependency array to prevent Fast Refresh reloads
 
+  // Cache warming function for better hit rates
+  const warmCache = useCallback(async () => {
+    try {
+      // Pre-fetch data to warm the cache
+      const [requestsResult, fleetResult, statsResult] = await Promise.allSettled([
+        RentalRequestService.fetchRequests(1, 100),
+        RentalRequestService.fetchFleet(),
+        RentalRequestService.fetchDashboardStats()
+      ])
+
+      // Update cache with successful results
+      if (requestsResult.status === 'fulfilled' && !requestsResult.value.error) {
+        cacheRef.current.requests = {
+          data: requestsResult.value.data || [],
+          timestamp: Date.now(),
+          filters: { ...filters },
+          stale: false
+        }
+      }
+
+      if (fleetResult.status === 'fulfilled' && !fleetResult.value.error) {
+        cacheRef.current.fleet = {
+          data: fleetResult.value.data || [],
+          timestamp: Date.now(),
+          stale: false
+        }
+      }
+
+      if (statsResult.status === 'fulfilled' && !statsResult.value.error) {
+        cacheRef.current.stats = {
+          data: statsResult.value.data,
+          timestamp: Date.now(),
+          stale: false
+        }
+      }
+
+      console.log('Cache warmed successfully')
+    } catch (err) {
+      console.warn('Cache warming failed:', err)
+    }
+  }, [filters])
+
+  // Setup cache warming on mount
+  useEffect(() => {
+    // Warm cache after initial load
+    const warmTimer = setTimeout(() => {
+      warmCache()
+    }, 2000) // Warm cache 2 seconds after mount
+
+    return () => {
+      clearTimeout(warmTimer)
+    }
+  }, [warmCache])
+
   return {
     data,
     loading,
@@ -355,7 +570,10 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
     debouncedFetch,
     setData,
     notify,
-    invalidateCache
+    invalidateCache,
+    markCacheStale,
+    backgroundPrefetch,
+    warmCache
   }
 }
 
@@ -426,7 +644,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   })
 
   // Use the data fetching hook
-  const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData, notify, invalidateCache } = useDataFetching(setRealtimeStatus, filters)
+  const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData, notify, invalidateCache, markCacheStale, backgroundPrefetch, warmCache } = useDataFetching(setRealtimeStatus, filters)
 
   // Optimized filter setters
   const setFilters = useCallback((newFilters: { userId?: string | null; equipmentId?: string | null; status?: string | null }) => {
@@ -472,13 +690,14 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     ])
   }, [])
 
-  const createActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, successMessage: string, optimisticUpdate?: (id: string) => void, cacheKey?: 'requests' | 'fleet' | 'stats') => {
+  const createActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, successMessage: string, optimisticUpdate?: (id: string) => void, cacheKeys?: ('requests' | 'fleet' | 'stats')[]) => {
     return async (id: string) => {
       setActionLoadingId(id)
+      
       try {
         const req = findRequest(id)
         
-        // Apply optimistic update if provided
+        // Apply optimistic update immediately for better UX
         if (optimisticUpdate) {
           optimisticUpdate(id)
         }
@@ -488,26 +707,47 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
           throw new Error(`Service method for ${actionType} is not available`)
         }
         
+        // Execute service method
         await serviceMethod(id)
+        
+        // Show success message immediately
         notify.success(successMessage)
         
-        // Invalidate cache after successful action
-        if (cacheKey) {
-          invalidateCache(cacheKey)
+        // Mark cache as stale for background refresh (non-blocking)
+        if (cacheKeys && cacheKeys.length > 0) {
+          // Use setTimeout to avoid blocking the UI
+          setTimeout(() => {
+            cacheKeys.forEach(key => {
+              markCacheStale(key)
+            })
+          }, 0)
+        } else {
+          // Default: mark requests and stats as stale for most actions
+          setTimeout(() => {
+            markCacheStale('requests')
+            markCacheStale('stats')
+          }, 0)
         }
         
-        await logAudit(`${actionType} rental request`, {
-          request_id: id,
-          equipment_id: req?.equipment_id,
-          equipment_name: req?.equipment?.name,
-          request_user_id: req?.user_id
-        })
+        // Log audit asynchronously to avoid blocking
+        setTimeout(async () => {
+          try {
+            await logAudit(`${actionType} rental request`, {
+              request_id: id,
+              equipment_id: req?.equipment_id,
+              equipment_name: req?.equipment?.name,
+              request_user_id: req?.user_id
+            })
+          } catch (auditError) {
+            console.warn('Audit logging failed:', auditError)
+          }
+        }, 0)
         
       } catch (error) {
         console.error(`Error in ${actionType} action:`, error)
         notify.error(error instanceof Error ? error.message : `Failed to ${actionType.toLowerCase()} request`)
         
-        // Revert optimistic update on error
+        // Revert optimistic update on error (non-blocking)
         setTimeout(() => {
           debouncedFetch(true)
         }, 100)
@@ -515,7 +755,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         setActionLoadingId(null)
       }
     }
-  }, [findRequest, logAudit, debouncedFetch, invalidateCache])
+  }, [findRequest, logAudit, debouncedFetch, markCacheStale])
 
   const handleApprove = useCallback(
     createActionHandler('Approved', 
@@ -532,17 +772,21 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
           return {
             ...prev,
             requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Approved' } : r
+              r.id === id 
+                ? { ...r, status: 'Approved', updated_at: new Date().toISOString() }
+                : r
             ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'Reserved' } : f
-            ) : prev.fleet
+            fleet: prev.fleet.map(f => 
+              f.id === req?.equipment_id 
+                ? { ...f, status: 'In Use' }
+                : f
+            )
           }
         })
       },
-      'requests'
+      ['requests', 'fleet', 'stats'] // Invalidate all caches for approve action
     ),
-    [createActionHandler]
+    [createActionHandler, setData]
   )
 
   const handleDecline = useCallback(
@@ -553,24 +797,20 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return RentalRequestService.declineRequest(id)
       }, 
-      'Request declined.',
+      'Request declined successfully',
       (id: string) => {
-        setData(prev => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Declined' } : r
-            ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
-            ) : prev.fleet
-          }
-        })
+        setData(prev => ({
+          ...prev,
+          requests: prev.requests.map(r => 
+            r.id === id 
+              ? { ...r, status: 'Declined', updated_at: new Date().toISOString() }
+              : r
+          )
+        }))
       },
-      'requests'
+      ['requests', 'stats'] // Invalidate requests and stats for decline action
     ),
-    [createActionHandler]
+    [createActionHandler, setData]
   )
 
   const handleComplete = useCallback(
@@ -581,24 +821,28 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return RentalRequestService.completeRequest(id)
       }, 
-      'Request marked as completed.',
+      'Request completed successfully',
       (id: string) => {
         setData(prev => {
           const req = prev.requests.find(r => r.id === id)
           return {
             ...prev,
             requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Completed' } : r
+              r.id === id 
+                ? { ...r, status: 'Completed', updated_at: new Date().toISOString() }
+                : r
             ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
-            ) : prev.fleet
+            fleet: prev.fleet.map(f => 
+              f.id === req?.equipment_id 
+                ? { ...f, status: 'Available' }
+                : f
+            )
           }
         })
       },
-      'requests'
+      ['requests', 'fleet', 'stats'] // Invalidate all caches for complete action
     ),
-    [createActionHandler]
+    [createActionHandler, setData]
   )
 
   const handleReopen = useCallback(
@@ -609,24 +853,20 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return RentalRequestService.reopenRequest(id)
       }, 
-      'Request reopened.',
+      'Request reopened successfully',
       (id: string) => {
-        setData(prev => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Reopened' } : r
-            ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'In Use' } : f
-            ) : prev.fleet
-          }
-        })
+        setData(prev => ({
+          ...prev,
+          requests: prev.requests.map(r => 
+            r.id === id 
+              ? { ...r, status: 'Pending', updated_at: new Date().toISOString() }
+              : r
+          )
+        }))
       },
-      'requests'
+      ['requests', 'stats'] // Invalidate requests and stats for reopen action
     ),
-    [createActionHandler]
+    [createActionHandler, setData]
   )
 
   const handleCancel = useCallback(
@@ -637,27 +877,31 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return RentalRequestService.cancelRequest(id)
       }, 
-      'Request cancelled.',
+      'Request cancelled successfully',
       (id: string) => {
         setData(prev => {
           const req = prev.requests.find(r => r.id === id)
           return {
             ...prev,
             requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Cancelled' } : r
+              r.id === id 
+                ? { ...r, status: 'Cancelled', updated_at: new Date().toISOString() }
+                : r
             ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
-            ) : prev.fleet
+            fleet: prev.fleet.map(f => 
+              f.id === req?.equipment_id 
+                ? { ...f, status: 'Available' }
+                : f
+            )
           }
         })
       },
-      'requests'
+      ['requests', 'fleet', 'stats'] // Invalidate all caches for cancel action
     ),
-    [createActionHandler]
+    [createActionHandler, setData]
   )
 
-  const createBulkActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>) => {
+  const createBulkActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, cacheKeys?: ('requests' | 'fleet' | 'stats')[]) => {
     return async (ids: string[]) => {
       if (!serviceMethod || typeof serviceMethod !== 'function') {
         notify.error(`Service method for ${actionType} is not available`)
@@ -669,6 +913,17 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         await Promise.all(ids.map(id => serviceMethod(id)))
         notify.success(`${ids.length} requests ${actionType.toLowerCase()} successfully.`)
         
+        // Smart cache invalidation based on action type
+        if (cacheKeys && cacheKeys.length > 0) {
+          cacheKeys.forEach(key => {
+            markCacheStale(key)
+          })
+        } else {
+          // Default: mark requests and stats as stale for bulk actions
+          markCacheStale('requests')
+          markCacheStale('stats')
+        }
+        
         // Use a small delay for smoother UX
         setTimeout(() => {
           debouncedFetch()
@@ -678,7 +933,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         notify.error(`Failed to ${actionType.toLowerCase()} all requests. ${error instanceof Error ? error.message : ''}`)
       }
     }
-  }, [debouncedFetch])
+  }, [debouncedFetch, markCacheStale])
 
   const handleBulkApprove = useCallback(
     createBulkActionHandler('Approving', 
@@ -687,7 +942,8 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
           throw new Error('RentalRequestService.approveRequest is not available')
         }
         return RentalRequestService.approveRequest(id)
-      }
+      },
+      ['requests', 'fleet', 'stats'] // Invalidate all caches for bulk approve
     ),
     [createBulkActionHandler]
   )
@@ -699,7 +955,8 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
           throw new Error('RentalRequestService.declineRequest is not available')
         }
         return RentalRequestService.declineRequest(id)
-      }
+      },
+      ['requests', 'stats'] // Invalidate requests and stats for bulk decline
     ),
     [createBulkActionHandler]
   )
@@ -711,7 +968,8 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
           throw new Error('RentalRequestService.deleteRequest is not available')
         }
         return RentalRequestService.deleteRequest(id)
-      }
+      },
+      ['requests', 'stats'] // Invalidate requests and stats for bulk delete
     ),
     [createBulkActionHandler]
   )
@@ -725,8 +983,9 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       notify.success('Fleet item deleted successfully.')
       await logAudit('Deleted fleet item', { fleet_id: id })
       
-      // Invalidate fleet cache
-      invalidateCache('fleet')
+      // Mark fleet cache as stale for better UX
+      markCacheStale('fleet')
+      markCacheStale('stats') // Stats also affected by fleet changes
       
       debouncedFetch()
     } catch (error) {
@@ -734,7 +993,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [logAudit, debouncedFetch, invalidateCache])
+  }, [logAudit, debouncedFetch, markCacheStale])
 
   const handleEdit = useCallback(async (id: string, updatedFields: any) => {
     setActionLoadingId(id)
@@ -745,8 +1004,9 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       notify.success('Request updated successfully.')
       await logAudit('Updated rental request', { request_id: id, updated_fields: updatedFields })
       
-      // Invalidate requests cache
-      invalidateCache('requests')
+      // Mark requests cache as stale for better UX
+      markCacheStale('requests')
+      markCacheStale('stats') // Stats might be affected by request updates
       
       debouncedFetch()
     } catch (error) {
@@ -754,7 +1014,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [logAudit, debouncedFetch, invalidateCache])
+  }, [logAudit, debouncedFetch, markCacheStale])
 
   const handleFleetStatusUpdate = async (fleetId: string, newStatus: string) => {
     try {
@@ -769,8 +1029,9 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       await RentalRequestService.updateFleetStatus(fleetId, newStatus)
       notify.success('Fleet status updated successfully')
       
-      // Invalidate fleet cache
-      invalidateCache('fleet')
+      // Mark fleet and stats cache as stale for better UX
+      markCacheStale('fleet')
+      markCacheStale('stats')
       
       // Log audit if available
       try {
@@ -834,7 +1095,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     handleBulkDelete,
     handleFleetDelete,
     handleFleetStatusUpdate,
-    handleEdit
+    handleEdit,
   }
 
   return (
@@ -1259,7 +1520,8 @@ const TabContent = React.memo(({ children, tabKey }: { children: React.ReactNode
   </div>
 ))
 
-export default function Page() {
+// Client component for the dashboard
+function DashboardClient() {
   const [auditOpen, setAuditOpen] = useState(false)
   const [auditLog, setAuditLog] = useState<any[]>([])
   const [expandedLog, setExpandedLog] = useState<string | null>(null)
@@ -1306,19 +1568,6 @@ export default function Page() {
       console.error('Failed to load audit log:', error)
     }
   }, [auditLogLoaded, user?.id])
-
-  // Example: How to use the new indexed methods for better performance
-  // 
-  // 1. Fetch requests by user (uses rental_requests_user_id_idx):
-  // const userRequests = await RentalRequestService.fetchRequestsByUser(userId, 1, 10, 'Pending')
-  //
-  // 2. Fetch requests by equipment (uses rental_requests_equipment_id_idx):
-  // const equipmentRequests = await RentalRequestService.fetchRequestsByEquipment(equipmentId, 1, 10, 'Approved')
-  //
-  // 3. Fetch audit log by user (uses audit_log_user_id_idx):
-  // const userAuditLog = await RentalRequestService.fetchAuditLogByUser(userId, 1, 20)
-  //
-  // These methods are much faster than fetching all data and filtering in JavaScript!
 
   // Validate service availability
   if (!RentalRequestService) {
@@ -1374,7 +1623,7 @@ export default function Page() {
   }
 
   return (
-    <SupabaseProvider>
+    <div className="min-h-screen bg-white dark:bg-white">
       <DashboardProvider>
         <DashboardContent 
           user={user}
@@ -1391,6 +1640,11 @@ export default function Page() {
           fetchAuditLog={fetchAuditLog}
         />
       </DashboardProvider>
-    </SupabaseProvider>
+    </div>
   )
+}
+
+// Main page component
+export default function Page() {
+  return <DashboardClient />
 }
