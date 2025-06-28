@@ -7,6 +7,7 @@ import { User, Session } from '@supabase/supabase-js'
 // Enhanced cache with session tracking
 interface UserCache {
   user: User | null
+  session: Session | null
   timestamp: number
   sessionId: string | null
 }
@@ -16,6 +17,7 @@ const CACHE_DURATION = 2 * 60 * 1000 // Reduced to 2 minutes for better security
 
 interface AuthState {
   user: User | null
+  session: Session | null
   loading: boolean
   error: string | null
   isAuthenticated: boolean
@@ -25,6 +27,7 @@ interface AuthState {
 export function useAuth() {
   const [state, setState] = useState<AuthState>({
     user: null,
+    session: null,
     loading: true,
     error: null,
     isAuthenticated: false,
@@ -46,15 +49,24 @@ export function useAuth() {
   }, [])
 
   // Memoized user check to prevent unnecessary recalculations
-  const updateUserState = useCallback((user: User | null) => {
+  const updateUserState = useCallback((user: User | null, session: Session | null) => {
     if (!mountedRef.current) return
     
     const isAuthenticated = !!user
-    const isAdmin = user?.app_metadata?.role === 'super-admin'
+    // Only use app_metadata for role
+    const userRole = user?.app_metadata?.role
+    const isAdmin = userRole === 'super-admin'
+    
+    // console.log('User role check:', {
+    //   userRole,
+    //   isAdmin,
+    //   appMetadata: user?.app_metadata
+    // })
     
     setState(prev => ({
       ...prev,
       user,
+      session,
       isAuthenticated,
       isAdmin,
       loading: false,
@@ -66,7 +78,7 @@ export function useAuth() {
   const handleError = useCallback((error: Error) => {
     if (!mountedRef.current) return
     
-    console.error('Auth error:', error)
+    // console.error('Auth error:', error)
     setState(prev => ({
       ...prev,
       error: error.message,
@@ -94,7 +106,7 @@ export function useAuth() {
       }
       
       // Update state after successful sign out
-      updateUserState(null)
+      updateUserState(null, null)
     } catch (error) {
       handleError(error as Error)
     }
@@ -103,54 +115,73 @@ export function useAuth() {
   // Memoized initial user fetch with enhanced caching
   const getInitialUser = useCallback(async () => {
     try {
+      // console.log('getInitialUser called - fetching session...');
       const sessionId = await getSessionId()
       currentSessionIdRef.current = sessionId
+      // console.log('Session ID:', sessionId);
 
       // Check cache with session validation
       if (userCache && 
           Date.now() - userCache.timestamp < CACHE_DURATION &&
           userCache.sessionId === sessionId) {
-        updateUserState(userCache.user)
+        // console.log('Using cached session data');
+        updateUserState(userCache.user, userCache.session)
         return
       }
 
       // Cache miss or invalid - fetch fresh data
-      const { data: { user }, error } = await getSupabaseClient().auth.getUser()
+      // console.log('Fetching fresh session data...');
+      const { data: { session }, error } = await getSupabaseClient().auth.getSession()
       
       if (error) {
+        // console.error('Error fetching session:', error);
         throw error
       }
+
+      const user = session?.user || null
+      // console.log('Fresh session data:', { 
+      //   hasSession: !!session, 
+      //   hasUser: !!user, 
+      //   hasAccessToken: !!session?.access_token,
+      //   userRole: user?.app_metadata?.role 
+      // });
 
       // Update cache with session ID
       userCache = { 
         user, 
+        session: session || null,
         timestamp: Date.now(),
         sessionId 
       }
-      updateUserState(user)
+      updateUserState(user, session)
     } catch (error) {
+      // console.error('Error in getInitialUser:', error);
       handleError(error as Error)
     }
   }, [updateUserState, handleError, getSessionId])
 
   // Memoized auth state change handler
   const handleAuthStateChange = useCallback(async (event: string, session: Session | null) => {
+    // console.log('Auth state change:', { event, hasSession: !!session, hasAccessToken: !!session?.access_token });
     const user = session?.user ?? null
     const sessionId = session?.access_token ? session.access_token.slice(-20) : null
     
     // Clear cache on auth state changes to ensure fresh data
     if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      // console.log('Clearing cache due to auth state change:', event);
       clearCache()
     }
     
     // Update cache with new session ID
     userCache = { 
       user, 
+      session,
       timestamp: Date.now(),
       sessionId 
     }
     currentSessionIdRef.current = sessionId
-    updateUserState(user)
+    // console.log('Updated user state with session:', { hasUser: !!user, hasSession: !!session });
+    updateUserState(user, session)
   }, [updateUserState, clearCache])
 
   useEffect(() => {
@@ -175,12 +206,13 @@ export function useAuth() {
   // Memoized return values to prevent unnecessary re-renders
   const memoizedState = useMemo(() => ({
     user: state.user,
+    session: state.session,
     loading: state.loading,
     error: state.error,
     signOut,
     isAdmin: state.isAdmin,
     isAuthenticated: state.isAuthenticated
-  }), [state.user, state.loading, state.error, state.isAdmin, state.isAuthenticated, signOut])
+  }), [state.user, state.session, state.loading, state.error, state.isAdmin, state.isAuthenticated, signOut])
 
   return memoizedState
 } 

@@ -27,6 +27,8 @@ import { useAuth } from '@/features/shared'
 import SupabaseProvider from '@/features/shared/components/SupabaseProvider'
 import { DashboardCard, DashboardCardSkeleton, FleetCard, FleetCardSkeleton } from "@/features/dashboard"
 import { useDashboardData } from "@/features/dashboard"
+import { useLiveDashboardData } from "@/features/dashboard/hooks/use-live-dashboard-data"
+import { useDashboardActions } from "@/features/dashboard/hooks/useDashboardActions"
 
 // Lazy load tab components for better performance
 const DashboardTab = lazy(() => import('./tabs/DashboardTab'))
@@ -106,7 +108,12 @@ const ActionLoadingOverlay = ({ isVisible }: { isVisible: boolean }) => (
 )
 
 // Custom hook for data fetching with React Query patterns and caching
-const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected' | 'connecting') => void, filters: { userId: string | null; equipmentId: string | null; status: string | null }) => {
+const useDataFetching = (
+  filters: { userId: string | null; equipmentId: string | null; status: string | null },
+  autoRefreshEnabled: boolean,
+  setAutoRefreshEnabled: (enabled: boolean) => void,
+  session: any // Add session parameter
+) => {
   const notify = useNotify();
   const [data, setData] = useState<{
     requests: RentalRequest[]
@@ -118,7 +125,6 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
   const [lastFetch, setLastFetch] = useState<Date>(new Date())
   const loadingRef = useRef(false)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const realtimeSubscriptionsRef = useRef<any[]>([])
   const initializedRef = useRef(false)
   const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -449,63 +455,137 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
       if (prefetchTimeoutRef.current) {
         clearTimeout(prefetchTimeoutRef.current)
       }
-      // Cleanup realtime subscriptions
-      realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe())
     }
   }, [])
 
-  // Initial data fetch and realtime setup - only run once
-  useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-    
-    // Fetch data without showing loading state initially
-    const initializeData = async () => {
-      try {
-        const [requestsResult, fleetResult, statsResult] = await Promise.all([
-          RentalRequestService.fetchRequests(1, 100),
-          RentalRequestService.fetchFleet(),
-          RentalRequestService.fetchDashboardStats()
-        ])
+  // Initialize data function
+  const initializeData = useCallback(async () => {
+    // console.log('Initializing dashboard data...')
+    await fetchData(true) // Force initial fetch
+  }, [fetchData])
 
-        const newData = {
-          requests: requestsResult.data || [],
-          fleet: fleetResult.data || [],
-          stats: statsResult.data
-        }
-        
-        // Update cache
-        cacheRef.current.requests = {
-          data: newData.requests,
-          timestamp: Date.now(),
-          filters: { ...filters },
-          stale: false
-        }
-        cacheRef.current.fleet = {
-          data: newData.fleet,
-          timestamp: Date.now(),
-          stale: false
-        }
-        cacheRef.current.stats = {
-          data: newData.stats,
-          timestamp: Date.now(),
-          stale: false
-        }
-        
-        setData(newData)
-        setLastFetch(new Date())
-        
-        // Setup realtime subscriptions after initial data load
-        // setupRealtimeSubscriptions()
-      } catch (err) {
-        console.error('Error in initial data fetch:', err)
-        setError('Failed to load data')
-        notify.error('Failed to load data. Please refresh the page.')
-      }
-    }
+  // Initialize data and setup real-time subscriptions
+  useEffect(() => {
+    // console.log('Setting up real-time subscriptions (inlined)...');
+    // console.log('Session state:', { session: !!session, sessionAccessToken: !!session?.access_token });
     
-    initializeData()
-  }, []) // Empty dependency array to prevent Fast Refresh reloads
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      initializeData();
+    }
+
+    // Only setup real-time if session is available
+    if (session && session.access_token) {
+      // console.log('Session available, setting up real-time...');
+      
+      (async () => {
+        try {
+          // Cleanup existing subscriptions
+          // realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe());
+          // realtimeSubscriptionsRef.current = [];
+
+          // Create authenticated client for real-time subscriptions
+          const supabase = getSupabaseClient();
+
+          // Add connection timeout
+          // const connectionTimeout = setTimeout(() => {
+          //   console.log('Real-time connection timeout, falling back to polling');
+          //   setRealtimeStatus('disconnected');
+          //   notify.info('Real-time connection timeout. Using polling mode.');
+          // }, 10000); // 10 second timeout
+
+          // Rental Requests real-time subscription
+          // const requestsSubscription = supabase
+          //   .channel('rental_requests_realtime')
+          //   .on('postgres_changes',
+          //     {
+          //       event: '*',
+          //       schema: 'public',
+          //       table: 'rental_requests'
+          //     },
+          //     (payload: any) => {
+          //       console.log('Rental request change:', payload);
+          //       markCacheStale('requests');
+          //       markCacheStale('stats');
+          //       setData(prev => ({
+          //         ...prev,
+          //         requests: [...prev.requests]
+          //       }));
+          //     }
+          //   )
+          //   .subscribe((status) => {
+          //     console.log('Rental requests subscription status:', status);
+          //     if (status === 'CHANNEL_ERROR') {
+          //       console.error('Rental requests subscription failed:', status);
+          //       clearTimeout(connectionTimeout);
+          //       setRealtimeStatus('disconnected');
+          //       notify.error('Real-time connection failed. Using polling mode.');
+          //     } else if (status === 'SUBSCRIBED') {
+          //       console.log('Rental requests subscription successful');
+          //       clearTimeout(connectionTimeout);
+          //       setRealtimeStatus('connected');
+          //       notify.success('Real-time connection established');
+          //     } else if (status === 'CLOSED') {
+          //       console.log('Rental requests subscription closed');
+          //       clearTimeout(connectionTimeout);
+          //       setRealtimeStatus('disconnected');
+          //     }
+          //   });
+
+          // Fleet real-time subscription
+          // const fleetSubscription = supabase
+          //   .channel('fleet_realtime')
+          //   .on('postgres_changes',
+          //     {
+          //       event: '*',
+          //       schema: 'public',
+          //       table: 'fleet'
+          //     },
+          //     (payload: any) => {
+          //       console.log('Fleet change:', payload);
+          //       markCacheStale('fleet');
+          //       markCacheStale('stats');
+          //       setData(prev => ({
+          //         ...prev,
+          //         fleet: [...prev.fleet]
+          //       }));
+          //     }
+          //   )
+          //   .subscribe((status) => {
+          //     console.log('Fleet subscription status:', status);
+          //     if (status === 'CHANNEL_ERROR') {
+          //       console.error('Fleet subscription failed:', status);
+          //       clearTimeout(connectionTimeout);
+          //       setRealtimeStatus('disconnected');
+          //       notify.error('Real-time connection failed. Using polling mode.');
+          //     } else if (status === 'SUBSCRIBED') {
+          //       console.log('Fleet subscription successful');
+          //       clearTimeout(connectionTimeout);
+          //       setRealtimeStatus('connected');
+          //       notify.success('Real-time connection established');
+          //     } else if (status === 'CLOSED') {
+          //       console.log('Fleet subscription closed');
+          //       clearTimeout(connectionTimeout);
+          //       setRealtimeStatus('disconnected');
+          //     }
+          //   });
+
+          // realtimeSubscriptionsRef.current = [requestsSubscription, fleetSubscription];
+
+        } catch (error) {
+          console.error('Error setting up real-time subscriptions:', error);
+          // setRealtimeStatus('disconnected');
+          // notify.error('Failed to establish real-time connection. Using polling mode.');
+        }
+      })();
+    } else if (session === null) {
+      // Session is explicitly null (user not authenticated)
+      // console.log('No session available for real-time subscriptions');
+      // setRealtimeStatus('disconnected');
+    }
+    // If session is undefined, we're still loading, so don't do anything
+
+  }, [session, initializeData, setData])
 
   // Cache warming function for better hit rates
   const warmCache = useCallback(async () => {
@@ -543,15 +623,14 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
         }
       }
 
-      console.log('Cache warmed successfully')
+      // console.log('Cache warmed successfully')
     } catch (err) {
       console.warn('Cache warming failed:', err)
     }
   }, [filters])
 
-  // Setup cache warming on mount
+  // Warm cache on mount
   useEffect(() => {
-    // Warm cache after initial load
     const warmTimer = setTimeout(() => {
       warmCache()
     }, 2000) // Warm cache 2 seconds after mount
@@ -567,13 +646,7 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
     error,
     lastFetch,
     fetchData,
-    debouncedFetch,
     setData,
-    notify,
-    invalidateCache,
-    markCacheStale,
-    backgroundPrefetch,
-    warmCache
   }
 }
 
@@ -591,14 +664,13 @@ interface DashboardContextType {
   tab: string
   autoRefreshEnabled: boolean
   refreshInterval: number
-  realtimeStatus: 'connected' | 'disconnected' | 'connecting'
   filters: {
     userId: string | null
     equipmentId: string | null
     status: string | null
   }
   fetchData: (isManualRefresh?: boolean) => Promise<void>
-  debouncedFetch: (isManualRefresh?: boolean) => void
+  setData: (data: { requests: RentalRequest[]; fleet: any[]; stats: any }) => void
   setActionLoadingId: (id: string | null) => void
   setTab: (tab: string) => void
   setAutoRefreshEnabled: (enabled: boolean) => void
@@ -636,15 +708,17 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   const [tab, setTab] = useState('dashboard')
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(60000)
-  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting')
   const [filters, setFiltersState] = useState({
     userId: null as string | null,
     equipmentId: null as string | null,
     status: null as string | null
   })
 
-  // Use the data fetching hook
-  const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData, notify, invalidateCache, markCacheStale, backgroundPrefetch, warmCache } = useDataFetching(setRealtimeStatus, filters)
+  // Get session from auth hook for real-time subscriptions
+  const { session } = useAuth()
+
+  // Use the new live data hook
+  const { data, loading, error, lastFetch, liveStatus, fetchData, setData } = useLiveDashboardData(filters)
 
   // Optimized filter setters
   const setFilters = useCallback((newFilters: { userId?: string | null; equipmentId?: string | null; status?: string | null }) => {
@@ -668,7 +742,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     return true
   }, [])
 
-  // Action handlers - moved inside provider
+  // Action helpers
   const findRequest = useCallback((id: string) => {
     return data.requests.find(r => r.id === id)
   }, [data.requests])
@@ -676,7 +750,6 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   const logAudit = useCallback(async (action: string, details: any = {}) => {
     const { data: { user } } = await getSupabaseClient().auth.getUser()
     if (!user?.id) return
-    
     await getSupabaseClient().from('audit_log').insert([
       {
         action,
@@ -690,380 +763,8 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     ])
   }, [])
 
-  const createActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, successMessage: string, optimisticUpdate?: (id: string) => void, cacheKeys?: ('requests' | 'fleet' | 'stats')[]) => {
-    return async (id: string) => {
-      setActionLoadingId(id)
-      
-      try {
-        const req = findRequest(id)
-        
-        // Apply optimistic update immediately for better UX
-        if (optimisticUpdate) {
-          optimisticUpdate(id)
-        }
-        
-        // Validate service method exists
-        if (!serviceMethod || typeof serviceMethod !== 'function') {
-          throw new Error(`Service method for ${actionType} is not available`)
-        }
-        
-        // Execute service method
-        await serviceMethod(id)
-        
-        // Show success message immediately
-        notify.success(successMessage)
-        
-        // Mark cache as stale for background refresh (non-blocking)
-        if (cacheKeys && cacheKeys.length > 0) {
-          // Use setTimeout to avoid blocking the UI
-          setTimeout(() => {
-            cacheKeys.forEach(key => {
-              markCacheStale(key)
-            })
-          }, 0)
-        } else {
-          // Default: mark requests and stats as stale for most actions
-          setTimeout(() => {
-            markCacheStale('requests')
-            markCacheStale('stats')
-          }, 0)
-        }
-        
-        // Log audit asynchronously to avoid blocking
-        setTimeout(async () => {
-          try {
-            await logAudit(`${actionType} rental request`, {
-              request_id: id,
-              equipment_id: req?.equipment_id,
-              equipment_name: req?.equipment?.name,
-              request_user_id: req?.user_id
-            })
-          } catch (auditError) {
-            console.warn('Audit logging failed:', auditError)
-          }
-        }, 0)
-        
-      } catch (error) {
-        console.error(`Error in ${actionType} action:`, error)
-        notify.error(error instanceof Error ? error.message : `Failed to ${actionType.toLowerCase()} request`)
-        
-        // Revert optimistic update on error (non-blocking)
-        setTimeout(() => {
-          debouncedFetch(true)
-        }, 100)
-      } finally {
-        setActionLoadingId(null)
-      }
-    }
-  }, [findRequest, logAudit, debouncedFetch, markCacheStale])
-
-  const handleApprove = useCallback(
-    createActionHandler('Approved', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
-          throw new Error('RentalRequestService.approveRequest is not available')
-        }
-        return RentalRequestService.approveRequest(id)
-      }, 
-      'Request approved and equipment reserved!',
-      (id: string) => {
-        setData(prev => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id 
-                ? { ...r, status: 'Approved', updated_at: new Date().toISOString() }
-                : r
-            ),
-            fleet: prev.fleet.map(f => 
-              f.id === req?.equipment_id 
-                ? { ...f, status: 'In Use' }
-                : f
-            )
-          }
-        })
-      },
-      ['requests', 'fleet', 'stats'] // Invalidate all caches for approve action
-    ),
-    [createActionHandler, setData]
-  )
-
-  const handleDecline = useCallback(
-    createActionHandler('Declined', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.declineRequest !== 'function') {
-          throw new Error('RentalRequestService.declineRequest is not available')
-        }
-        return RentalRequestService.declineRequest(id)
-      }, 
-      'Request declined successfully',
-      (id: string) => {
-        setData(prev => ({
-          ...prev,
-          requests: prev.requests.map(r => 
-            r.id === id 
-              ? { ...r, status: 'Declined', updated_at: new Date().toISOString() }
-              : r
-          )
-        }))
-      },
-      ['requests', 'stats'] // Invalidate requests and stats for decline action
-    ),
-    [createActionHandler, setData]
-  )
-
-  const handleComplete = useCallback(
-    createActionHandler('Completed', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.completeRequest !== 'function') {
-          throw new Error('RentalRequestService.completeRequest is not available')
-        }
-        return RentalRequestService.completeRequest(id)
-      }, 
-      'Request completed successfully',
-      (id: string) => {
-        setData(prev => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id 
-                ? { ...r, status: 'Completed', updated_at: new Date().toISOString() }
-                : r
-            ),
-            fleet: prev.fleet.map(f => 
-              f.id === req?.equipment_id 
-                ? { ...f, status: 'Available' }
-                : f
-            )
-          }
-        })
-      },
-      ['requests', 'fleet', 'stats'] // Invalidate all caches for complete action
-    ),
-    [createActionHandler, setData]
-  )
-
-  const handleReopen = useCallback(
-    createActionHandler('Reopened', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.reopenRequest !== 'function') {
-          throw new Error('RentalRequestService.reopenRequest is not available')
-        }
-        return RentalRequestService.reopenRequest(id)
-      }, 
-      'Request reopened successfully',
-      (id: string) => {
-        setData(prev => ({
-          ...prev,
-          requests: prev.requests.map(r => 
-            r.id === id 
-              ? { ...r, status: 'Pending', updated_at: new Date().toISOString() }
-              : r
-          )
-        }))
-      },
-      ['requests', 'stats'] // Invalidate requests and stats for reopen action
-    ),
-    [createActionHandler, setData]
-  )
-
-  const handleCancel = useCallback(
-    createActionHandler('Cancelled', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.cancelRequest !== 'function') {
-          throw new Error('RentalRequestService.cancelRequest is not available')
-        }
-        return RentalRequestService.cancelRequest(id)
-      }, 
-      'Request cancelled successfully',
-      (id: string) => {
-        setData(prev => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id 
-                ? { ...r, status: 'Cancelled', updated_at: new Date().toISOString() }
-                : r
-            ),
-            fleet: prev.fleet.map(f => 
-              f.id === req?.equipment_id 
-                ? { ...f, status: 'Available' }
-                : f
-            )
-          }
-        })
-      },
-      ['requests', 'fleet', 'stats'] // Invalidate all caches for cancel action
-    ),
-    [createActionHandler, setData]
-  )
-
-  const createBulkActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, cacheKeys?: ('requests' | 'fleet' | 'stats')[]) => {
-    return async (ids: string[]) => {
-      if (!serviceMethod || typeof serviceMethod !== 'function') {
-        notify.error(`Service method for ${actionType} is not available`)
-        return
-      }
-
-      notify.info(`${actionType} ${ids.length} requests...`)
-      try {
-        await Promise.all(ids.map(id => serviceMethod(id)))
-        notify.success(`${ids.length} requests ${actionType.toLowerCase()} successfully.`)
-        
-        // Smart cache invalidation based on action type
-        if (cacheKeys && cacheKeys.length > 0) {
-          cacheKeys.forEach(key => {
-            markCacheStale(key)
-          })
-        } else {
-          // Default: mark requests and stats as stale for bulk actions
-          markCacheStale('requests')
-          markCacheStale('stats')
-        }
-        
-        // Use a small delay for smoother UX
-        setTimeout(() => {
-          debouncedFetch()
-        }, 100)
-      } catch (error) {
-        console.error(`Error in bulk ${actionType} action:`, error)
-        notify.error(`Failed to ${actionType.toLowerCase()} all requests. ${error instanceof Error ? error.message : ''}`)
-      }
-    }
-  }, [debouncedFetch, markCacheStale])
-
-  const handleBulkApprove = useCallback(
-    createBulkActionHandler('Approving', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
-          throw new Error('RentalRequestService.approveRequest is not available')
-        }
-        return RentalRequestService.approveRequest(id)
-      },
-      ['requests', 'fleet', 'stats'] // Invalidate all caches for bulk approve
-    ),
-    [createBulkActionHandler]
-  )
-
-  const handleBulkDecline = useCallback(
-    createBulkActionHandler('Declining', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.declineRequest !== 'function') {
-          throw new Error('RentalRequestService.declineRequest is not available')
-        }
-        return RentalRequestService.declineRequest(id)
-      },
-      ['requests', 'stats'] // Invalidate requests and stats for bulk decline
-    ),
-    [createBulkActionHandler]
-  )
-
-  const handleBulkDelete = useCallback(
-    createBulkActionHandler('Deleting', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.deleteRequest !== 'function') {
-          throw new Error('RentalRequestService.deleteRequest is not available')
-        }
-        return RentalRequestService.deleteRequest(id)
-      },
-      ['requests', 'stats'] // Invalidate requests and stats for bulk delete
-    ),
-    [createBulkActionHandler]
-  )
-
-  const handleFleetDelete = useCallback(async (id: string) => {
-    setActionLoadingId(id)
-    try {
-      const { error } = await getSupabaseClient().from('fleet').delete().eq('id', id)
-      if (error) throw error
-      
-      notify.success('Fleet item deleted successfully.')
-      await logAudit('Deleted fleet item', { fleet_id: id })
-      
-      // Mark fleet cache as stale for better UX
-      markCacheStale('fleet')
-      markCacheStale('stats') // Stats also affected by fleet changes
-      
-      debouncedFetch()
-    } catch (error) {
-      notify.error(error instanceof Error ? error.message : 'Failed to delete fleet item')
-    } finally {
-      setActionLoadingId(null)
-    }
-  }, [logAudit, debouncedFetch, markCacheStale])
-
-  const handleEdit = useCallback(async (id: string, updatedFields: any) => {
-    setActionLoadingId(id)
-    try {
-      const { error } = await getSupabaseClient().from('rental_requests').update(updatedFields).eq('id', id)
-      if (error) throw error
-      
-      notify.success('Request updated successfully.')
-      await logAudit('Updated rental request', { request_id: id, updated_fields: updatedFields })
-      
-      // Mark requests cache as stale for better UX
-      markCacheStale('requests')
-      markCacheStale('stats') // Stats might be affected by request updates
-      
-      debouncedFetch()
-    } catch (error) {
-      notify.error(error instanceof Error ? error.message : 'Failed to update request')
-    } finally {
-      setActionLoadingId(null)
-    }
-  }, [logAudit, debouncedFetch, markCacheStale])
-
-  const handleFleetStatusUpdate = async (fleetId: string, newStatus: string) => {
-    try {
-      // Optimistic update
-      setData(prev => ({
-        ...prev,
-        fleet: prev.fleet.map(item => 
-          item.id === fleetId ? { ...item, status: newStatus } : item
-        )
-      }))
-
-      await RentalRequestService.updateFleetStatus(fleetId, newStatus)
-      notify.success('Fleet status updated successfully')
-      
-      // Mark fleet and stats cache as stale for better UX
-      markCacheStale('fleet')
-      markCacheStale('stats')
-      
-      // Log audit if available
-      try {
-        const { data: { user } } = await getSupabaseClient().auth.getUser()
-        if (user?.id) {
-          await getSupabaseClient().from('audit_log').insert([
-            {
-              action: 'Updated fleet status',
-              user_id: user.id,
-              details: {
-                user_email: user.email,
-                user_name: user.user_metadata?.name,
-                fleet_id: fleetId,
-                new_status: newStatus
-              }
-            }
-          ])
-        }
-      } catch (auditError) {
-        console.error('Failed to log audit:', auditError)
-      }
-      
-    } catch (error) {
-      console.error('Error updating fleet status:', error)
-      notify.error('Error updating fleet status')
-      
-      // Revert optimistic update on error
-      setTimeout(() => {
-        debouncedFetch(true)
-      }, 100)
-    }
-  }
+  // Use split action handlers
+  const actions = useDashboardActions({ setData, fetchData, findRequest, logAudit })
 
   const contextValue = {
     data,
@@ -1074,32 +775,24 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     tab,
     autoRefreshEnabled,
     refreshInterval,
-    realtimeStatus,
     filters,
     fetchData,
-    debouncedFetch,
+    setData,
     setActionLoadingId,
     setTab,
     setAutoRefreshEnabled,
     setRefreshInterval,
     setFilters,
     clearFilters,
-    // Action handlers
-    handleApprove,
-    handleDecline,
-    handleComplete,
-    handleReopen,
-    handleCancel,
-    handleBulkApprove,
-    handleBulkDecline,
-    handleBulkDelete,
-    handleFleetDelete,
-    handleFleetStatusUpdate,
-    handleEdit,
+    ...actions,
   }
 
   return (
     <DashboardContext.Provider value={contextValue}>
+      <div className="flex items-center gap-2 px-4 py-1">
+        {liveStatus === 'live' && <Badge variant="green">LIVE</Badge>}
+        {liveStatus === 'polling' && <Badge variant="yellow">POLLING</Badge>}
+      </div>
       {children}
     </DashboardContext.Provider>
   )
@@ -1143,10 +836,8 @@ const DashboardContent = ({
     tab,
     autoRefreshEnabled,
     refreshInterval,
-    realtimeStatus,
-    filters,
     fetchData,
-    debouncedFetch,
+    setData,
     setActionLoadingId,
     setTab,
     setAutoRefreshEnabled,
@@ -1162,8 +853,8 @@ const DashboardContent = ({
     handleBulkDecline,
     handleBulkDelete,
     handleFleetDelete,
+    handleFleetStatusUpdate,
     handleEdit,
-    handleFleetStatusUpdate
   } = useDashboard()
 
   // Memoize expensive calculations
@@ -1181,11 +872,11 @@ const DashboardContent = ({
     if (!autoRefreshEnabled) return
 
     const interval = setInterval(() => {
-      debouncedFetch()
+      fetchData(true)
     }, refreshInterval)
 
     return () => clearInterval(interval)
-  }, [autoRefreshEnabled, refreshInterval, debouncedFetch])
+  }, [autoRefreshEnabled, refreshInterval, fetchData])
 
   // Load audit log when tab changes
   useEffect(() => {
@@ -1244,7 +935,7 @@ const DashboardContent = ({
       
       // Use a small delay for smoother UX
       setTimeout(() => {
-        debouncedFetch()
+        fetchData(true)
       }, 100)
     } catch (error) {
       console.error('Error in delete action:', error)
@@ -1252,7 +943,7 @@ const DashboardContent = ({
     } finally {
       setActionLoadingId(null)
     }
-  }, [deleteDialog, debouncedFetch])
+  }, [deleteDialog, fetchData])
 
   const handleDirectDeleteCancel = useCallback(() => {
     setDeleteDialog({ open: false, id: null, row: null })
@@ -1372,7 +1063,7 @@ const DashboardContent = ({
             actionLoadingId={actionLoadingId}
             deleteDialog={deleteDialog}
             detailsId={detailsId}
-            onRefresh={() => debouncedFetch(true)}
+            onRefresh={() => fetchData(true)}
             onApprove={handleApprove}
             onDecline={handleDecline}
             onDelete={handleDeleteWrapper}
@@ -1389,15 +1080,15 @@ const DashboardContent = ({
             onSetDetailsId={setDetailsId}
             onFilterByUser={async (userId: string) => {
               setFilters({ userId })
-              await debouncedFetch(true)
+              await fetchData(true)
             }}
             onFilterByEquipment={async (equipmentId: string) => {
               setFilters({ equipmentId })
-              await debouncedFetch(true)
+              await fetchData(true)
             }}
             onClearIndexedFilters={async () => {
               clearFilters()
-              await debouncedFetch(true)
+              await fetchData(true)
             }}
           />
         </Suspense>
@@ -1433,7 +1124,6 @@ const DashboardContent = ({
           <SettingsTab
             autoRefreshEnabled={autoRefreshEnabled}
             refreshInterval={refreshInterval}
-            realtimeStatus={realtimeStatus}
             onSetAutoRefreshEnabled={setAutoRefreshEnabled}
             onSetRefreshInterval={setRefreshInterval}
           />
@@ -1455,8 +1145,7 @@ const DashboardContent = ({
     fleet,
     autoRefreshEnabled,
     refreshInterval,
-    realtimeStatus,
-    debouncedFetch,
+    fetchData,
     handleApprove,
     handleDecline,
     handleDeleteWrapper,
@@ -1476,7 +1165,7 @@ const DashboardContent = ({
     handleFleetDelete,
     handleFleetStatusUpdate,
     setAutoRefreshEnabled,
-    setRefreshInterval
+    setRefreshInterval,
   ])
 
   return (
@@ -1520,6 +1209,23 @@ const TabContent = React.memo(({ children, tabKey }: { children: React.ReactNode
   </div>
 ))
 
+// Debug component to show JWT payload
+function DebugJWT() {
+  const { session } = useAuth();
+  if (!session) return <div style={{color: 'red'}}>No session</div>;
+  let payload = null;
+  try {
+    payload = JSON.parse(atob(session.access_token.split('.')[1]));
+  } catch (e) {
+    return <div style={{color: 'red'}}>Invalid JWT</div>;
+  }
+  return (
+    <pre style={{background: '#f5f5f5', color: '#333', padding: 12, borderRadius: 6, marginBottom: 16}}>
+      {JSON.stringify(payload, null, 2)}
+    </pre>
+  );
+}
+
 // Client component for the dashboard
 function DashboardClient() {
   const [auditOpen, setAuditOpen] = useState(false)
@@ -1534,7 +1240,7 @@ function DashboardClient() {
   const [auditLogLoaded, setAuditLogLoaded] = useState(false);
 
   const router = useRouter()
-  const { user, loading: authLoading, isAdmin, isAuthenticated } = useAuth()
+  const { user, session, loading: authLoading, isAdmin, isAuthenticated } = useAuth()
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -1646,5 +1352,10 @@ function DashboardClient() {
 
 // Main page component
 export default function Page() {
-  return <DashboardClient />
+  return (
+    <>
+      <DebugJWT />
+      <DashboardClient />
+    </>
+  );
 }

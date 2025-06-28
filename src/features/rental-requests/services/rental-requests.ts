@@ -85,7 +85,6 @@ class RentalRequestService {
         .range(from, to)
 
       if (error) {
-        console.error('Error fetching requests:', error)
         return { data: [], total: 0, error: error.message }
       }
 
@@ -119,7 +118,6 @@ class RentalRequestService {
 
       return result
     } catch (error) {
-      console.error('Unexpected error fetching requests:', error)
       return {
         data: [],
         total: 0,
@@ -141,7 +139,6 @@ class RentalRequestService {
         .order("name")
 
       if (error) {
-        console.error('Error fetching fleet:', error)
         return { data: [], error: error.message }
       }
 
@@ -151,7 +148,6 @@ class RentalRequestService {
 
       return { data: data || [] }
     } catch (error) {
-      console.error('Unexpected error fetching fleet:', error)
       return {
         data: [],
         error: error instanceof Error ? error.message : 'Failed to fetch fleet'
@@ -219,7 +215,6 @@ class RentalRequestService {
 
       return { data: stats }
     } catch (error) {
-      console.error('Unexpected error fetching stats:', error)
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Failed to fetch dashboard stats'
@@ -360,7 +355,6 @@ class RentalRequestService {
         .single();
 
       if (error) {
-        console.error('Error creating request:', error);
         throw new Error(error.message);
       }
 
@@ -369,7 +363,6 @@ class RentalRequestService {
 
       return { data: data as unknown as RentalRequest, error: null };
     } catch (error) {
-      console.error('Unexpected error creating request:', error);
       return { data: null, error: error instanceof Error ? error.message : 'Failed to create request' };
     }
   }
@@ -429,7 +422,6 @@ class RentalRequestService {
         .range(from, to)
 
       if (error) {
-        console.error('Error fetching user requests:', error)
         return { data: [], total: 0, error: error.message }
       }
 
@@ -457,7 +449,6 @@ class RentalRequestService {
         total: count || 0
       }
     } catch (error) {
-      console.error('Unexpected error fetching user requests:', error)
       return {
         data: [],
         total: 0,
@@ -492,7 +483,6 @@ class RentalRequestService {
         .range(from, to)
 
       if (error) {
-        console.error('Error fetching equipment requests:', error)
         return { data: [], total: 0, error: error.message }
       }
 
@@ -520,7 +510,6 @@ class RentalRequestService {
         total: count || 0
       }
     } catch (error) {
-      console.error('Unexpected error fetching equipment requests:', error)
       return {
         data: [],
         total: 0,
@@ -547,7 +536,6 @@ class RentalRequestService {
         .range(from, to)
 
       if (error) {
-        console.error('Error fetching user audit log:', error)
         return { data: [], total: 0, error: error.message }
       }
 
@@ -556,7 +544,6 @@ class RentalRequestService {
         total: count || 0
       }
     } catch (error) {
-      console.error('Unexpected error fetching user audit log:', error)
       return {
         data: [],
         total: 0,

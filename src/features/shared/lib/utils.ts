@@ -118,9 +118,10 @@ class PerformanceMonitor {
 
   // Log metrics (can be extended to send to analytics service)
   private logMetric(type: string, data: any) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[Performance] ${type}:`, data)
-    }
+    // Comment out to silence performance logs
+    // if (process.env.NODE_ENV === 'development') {
+    //   console.log(`[Performance] ${type}:`, data)
+    // }
     // In production, you could send this to an analytics service
     // analytics.track('performance_metric', { type, ...data })
   }
