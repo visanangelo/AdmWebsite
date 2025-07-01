@@ -2,9 +2,7 @@
 
 import '../../../styles/dashboard-theme.css'
 import { AppSidebar } from "@/features/shared/components/layout/app-sidebar"
-import { ChartAreaInteractive } from "@/features/shared/components/chart-area-interactive"
 import { DataTable } from "@/features/rental-requests"
-import { SectionCards } from "@/features/shared/components/section-cards"
 import { SiteHeader } from "@/features/shared/components/layout/site-header"
 import { SidebarInset, SidebarProvider } from "@/features/shared/components/ui/sidebar"
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
@@ -19,7 +17,6 @@ import { RentalRequestService } from "@/services/rental-requests"
 import React from "react"
 import { Card, CardHeader, CardContent, CardTitle } from "@/features/shared/components/ui/card"
 import { Truck, CheckCircle, Clock, AlertCircle, RefreshCwIcon, Trash2Icon, EyeIcon } from "lucide-react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/features/shared/components/ui/tabs"
 import { Badge } from "@/features/shared/components/ui/badge"
 import { RentalRequest, FleetItem } from '@/types/rental'
 import { useAuth } from '@/hooks/use-auth'
