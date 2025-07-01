@@ -961,7 +961,6 @@ const DashboardContent = ({
   const {
     data: { requests, fleet },
     loading,
-    error,
     lastFetch,
     actionLoadingId,
     tab,
