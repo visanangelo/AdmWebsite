@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { RentalRequestService } from '@/features/rental-requests/services/rental-requests'
 import { useNotify } from '@/features/shared'
+import { getSupabaseClient } from '@/features/shared/lib/supabaseClient'
 
 interface DashboardFilters {
   userId: string | null
@@ -22,6 +23,7 @@ export const useDashboardData = (setRealtimeStatus: (status: 'connected' | 'disc
   const [filters, setFilters] = useState<DashboardFilters>({ userId: null, equipmentId: null, status: null })
   const notify = useNotify()
   const abortControllerRef = useRef<AbortController | null>(null)
+  const subscriptionRef = useRef<any>(null)
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
     if (abortControllerRef.current) {
@@ -122,6 +124,44 @@ export const useDashboardData = (setRealtimeStatus: (status: 'connected' | 'disc
       }
     }
   }, [filters])
+
+  // --- REALTIME SUBSCRIPTION LOGIC ---
+  useEffect(() => {
+    const supabase = getSupabaseClient()
+    setRealtimeStatus('connecting')
+
+    // Create a channel for dashboard real-time updates
+    const channel = supabase
+      .channel('dashboard-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rental_requests' },
+        () => {
+          fetchData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fleet' },
+        () => {
+          fetchData()
+        }
+      )
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') setRealtimeStatus('connected')
+        else if (status === 'CLOSED') setRealtimeStatus('disconnected')
+      })
+
+    subscriptionRef.current = channel
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current)
+        setRealtimeStatus('disconnected')
+      }
+    }
+  }, [fetchData, setRealtimeStatus])
+  // --- END REALTIME SUBSCRIPTION LOGIC ---
 
   return {
     data,

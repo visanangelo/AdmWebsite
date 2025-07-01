@@ -1,80 +1,98 @@
 "use client"
 
-import { Suspense, lazy } from 'react'
-import '../dashboard-theme.css'
-import { AppSidebar } from "@/features/shared"
-import { ChartAreaInteractive } from "@/features/shared/components/chart-area-interactive"
-import { DataTable } from "@/features/rental-requests"
-import { SectionCards } from "@/features/shared/components/section-cards"
-import { SiteHeader } from "@/features/shared"
-import { SidebarInset, SidebarProvider } from "@/features/shared/components/ui/sidebar"
+import '../../../styles/dashboard-theme.css'
+import { AppSidebar } from "@/components/app-sidebar"
+import { ChartAreaInteractive } from "@/components/chart-area-interactive"
+import { DataTable } from "@/components/data-table"
+import { SectionCards } from "@/components/section-cards"
+import { SiteHeader } from "@/components/site-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
-import { getSupabaseClient } from "@/features/shared"
-import { useNotify } from '@/features/shared'
-import { useRouter } from "next/navigation"
-import { Button } from "@/features/shared/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/features/shared/components/ui/dialog"
-import { Skeleton } from "@/features/shared/components/ui/skeleton"
+import { getSupabaseClient } from "@/lib/supabaseClient"
+import { useNotify } from '@/hooks/useNotify'
+import { useSearchParams, useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import { AnimatePresence, motion } from "framer-motion"
-import { RentalRequestService } from "@/features/rental-requests"
+import { RentalRequestService } from "@/services/rental-requests"
 import React from "react"
-import { Card, CardHeader, CardContent, CardTitle } from "@/features/shared/components/ui/card"
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
 import { Truck, CheckCircle, Clock, AlertCircle, RefreshCwIcon, Trash2Icon, EyeIcon } from "lucide-react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/features/shared/components/ui/tabs"
-import { Badge } from "@/features/shared/components/ui/badge"
-import { RentalRequest, FleetItem } from '@/features/shared'
-import { useAuth } from '@/features/shared'
-import SupabaseProvider from '@/features/shared/components/SupabaseProvider'
-import { DashboardCard, DashboardCardSkeleton, FleetCard, FleetCardSkeleton } from "@/features/dashboard"
-import { useDashboardData } from "@/features/dashboard"
-import { useLiveDashboardData } from "@/features/dashboard/hooks/use-live-dashboard-data"
-import { useDashboardActions } from "@/features/dashboard/hooks/useDashboardActions"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { RentalRequest, FleetItem } from '@/types/rental'
+import { useAuth } from '@/hooks/use-auth'
 
-// Lazy load tab components for better performance
-const DashboardTab = lazy(() => import('./tabs/DashboardTab'))
-const RequestsTab = lazy(() => import('./tabs/RequestsTab'))
-const FleetTab = lazy(() => import('./tabs/FleetTab'))
-const SettingsTab = lazy(() => import('./tabs/SettingsTab'))
+// Force dynamic rendering to prevent build-time errors
+export const dynamic = 'force-dynamic'
 
-// Inline skeleton for requests tab
-const RequestsSkeleton = () => (
-  <div className="space-y-6">
-    <div className="flex items-center justify-between">
-      <div className="space-y-3">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-64" />
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-3 rounded-full" />
-          <Skeleton className="h-4 w-16" />
+// Enhanced Dashboard Card with better visual design
+const DashboardCard = React.memo(({ 
+  title, 
+  value, 
+  icon: Icon, 
+  description, 
+  trend, 
+  loading = false 
+}: {
+  title: string
+  value: string | number
+  icon: React.ComponentType<{ className?: string }>
+  description: string
+  trend?: { value: number; isPositive: boolean }
+  loading?: boolean
+}) => {
+  if (loading) {
+    return <DashboardCardSkeleton />
+  }
+
+  return (
+    <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-gray-50/30 to-gray-100/20 border border-gray-200/60 hover:border-gray-300/80 transition-all duration-300 hover:shadow-lg hover:shadow-gray-200/50 hover:scale-[1.02]">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+        <CardTitle className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+          {title}
+        </CardTitle>
+        <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+          <Icon className="h-4 w-4 text-primary" />
         </div>
-        <Skeleton className="h-10 w-24 rounded-lg" />
-      </div>
-    </div>
-    
-    <div className="rounded-xl border border-gray-200/60 bg-card overflow-hidden">
-      <div className="p-6">
-        <div className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50/50">
-              <Skeleton className="h-4 w-4 rounded" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-24" />
-              <div className="flex space-x-2 ml-auto">
-                <Skeleton className="h-7 w-16 rounded-md" />
-                <Skeleton className="h-7 w-16 rounded-md" />
-                <Skeleton className="h-7 w-7 rounded-md" />
-              </div>
+      </CardHeader>
+      <CardContent className="relative z-10">
+        <div className="flex items-baseline gap-2">
+          <div className="text-2xl font-bold text-gray-900 group-hover:text-primary transition-colors">
+            {value}
+          </div>
+          {trend && (
+            <div className={`flex items-center gap-1 text-xs font-medium ${
+              trend.isPositive ? 'text-green-600' : 'text-red-600'
+            }`}>
+              <span>{trend.isPositive ? '↗' : '↘'}</span>
+              <span>{Math.abs(trend.value)}%</span>
             </div>
-          ))}
+          )}
         </div>
-      </div>
-    </div>
-  </div>
+        <p className="text-xs text-gray-500 mt-1 group-hover:text-gray-600 transition-colors">
+          {description}
+        </p>
+      </CardContent>
+    </Card>
+  )
+})
+
+// Enhanced Loading Skeleton with shimmer effect
+const DashboardCardSkeleton = () => (
+  <Card className="relative overflow-hidden bg-gradient-to-br from-white via-gray-50/30 to-gray-100/20 border border-gray-200/60">
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-8 w-8 rounded-lg" />
+    </CardHeader>
+    <CardContent>
+      <Skeleton className="h-8 w-16 mb-1" />
+      <Skeleton className="h-3 w-32" />
+    </CardContent>
+  </Card>
 )
 
 // Enhanced Action Loading Overlay with better UX
@@ -107,13 +125,136 @@ const ActionLoadingOverlay = ({ isVisible }: { isVisible: boolean }) => (
   </AnimatePresence>
 )
 
-// Custom hook for data fetching with React Query patterns and caching
-const useDataFetching = (
-  filters: { userId: string | null; equipmentId: string | null; status: string | null },
-  autoRefreshEnabled: boolean,
-  setAutoRefreshEnabled: (enabled: boolean) => void,
-  session: any // Add session parameter
-) => {
+// Enhanced Data Table Skeleton with better visual design
+const DataTableSkeleton = () => (
+  <div className="space-y-6">
+    {/* Header skeleton */}
+    <div className="flex items-center justify-between">
+      <div className="space-y-3">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-3 rounded-full" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-10 w-24 rounded-lg" />
+      </div>
+    </div>
+    
+    {/* Table skeleton */}
+    <div className="rounded-xl border border-gray-200/60 bg-card overflow-hidden">
+      <div className="p-6">
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center space-x-4 p-3 rounded-lg bg-gray-50/50">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-24" />
+              <div className="flex space-x-2 ml-auto">
+                <Skeleton className="h-7 w-16 rounded-md" />
+                <Skeleton className="h-7 w-16 rounded-md" />
+                <Skeleton className="h-7 w-7 rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+// Enhanced Fleet Card with better visual design
+const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
+  eq: FleetItem
+  onStatus: (id: string, status: string) => void
+  onDelete: (id: string) => void
+  loadingId?: string | null | undefined
+}) {
+  const isLoading = loadingId === eq.id
+  const statusColors = {
+    "Available": "bg-green-100 text-green-800 border-green-200 shadow-green-100/50",
+    "In Use": "bg-blue-100 text-blue-800 border-blue-200 shadow-blue-100/50",
+    "Reserved": "bg-yellow-100 text-yellow-800 border-yellow-200 shadow-yellow-100/50",
+    "Maintenance": "bg-red-100 text-red-800 border-red-200 shadow-red-100/50"
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="group relative bg-gradient-to-br from-white via-gray-50/30 to-gray-100/20 p-6 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 hover:scale-[1.01] hover:border-gray-300/80"
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+      <div className="relative z-10 flex justify-between items-start">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors mb-3">
+            {eq.name}
+          </h3>
+          <div className="flex items-center gap-3 mb-4">
+            <span className={`px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 ${
+              statusColors[eq.status as keyof typeof statusColors] || "bg-gray-100 text-gray-800 border-gray-200 shadow-gray-100/50"
+            }`}>
+              {eq.status}
+            </span>
+            {isLoading && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-primary"></div>
+                <span>Updating...</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={eq.status}
+            onChange={(e) => onStatus(eq.id, e.target.value)}
+            disabled={isLoading}
+            className="text-sm border border-gray-200/60 rounded-lg px-3 py-2 bg-white/80 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="Available">Available</option>
+            <option value="In Use">In Use</option>
+            <option value="Reserved">Reserved</option>
+            <option value="Maintenance">Maintenance</option>
+          </select>
+          <button
+            onClick={() => onDelete(eq.id)}
+            disabled={isLoading}
+            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group/delete"
+            title="Delete equipment"
+          >
+            <Trash2Icon className="h-4 w-4 group-hover/delete:scale-110 transition-transform" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+})
+
+// Enhanced Fleet Card Skeleton
+const FleetCardSkeleton = () => (
+  <div className="relative overflow-hidden bg-gradient-to-br from-white via-gray-50/30 to-gray-100/20 p-6 rounded-xl border border-gray-200/60 shadow-sm">
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
+    <div className="flex justify-between items-start relative z-10">
+      <div className="flex-1">
+        <Skeleton className="h-6 w-32 mb-3" />
+        <Skeleton className="h-5 w-20 mb-4" />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="h-8 w-8 rounded-lg" />
+      </div>
+    </div>
+  </div>
+)
+
+// Custom hook for data fetching with React Query patterns
+const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected' | 'connecting') => void) => {
   const notify = useNotify();
   const [data, setData] = useState<{
     requests: RentalRequest[]
@@ -125,188 +266,91 @@ const useDataFetching = (
   const [lastFetch, setLastFetch] = useState<Date>(new Date())
   const loadingRef = useRef(false)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const realtimeSubscriptionsRef = useRef<any[]>([])
   const initializedRef = useRef(false)
-  const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  
-  // Enhanced cache with background refresh
-  const cacheRef = useRef<{
-    requests: { data: RentalRequest[]; timestamp: number; filters: any; stale: boolean }
-    fleet: { data: any[]; timestamp: number; stale: boolean }
-    stats: { data: any; timestamp: number; stale: boolean }
-  }>({
-    requests: { data: [], timestamp: 0, filters: null, stale: true },
-    fleet: { data: [], timestamp: 0, stale: true },
-    stats: { data: null, timestamp: 0, stale: true }
-  })
 
-  // Cache configuration
-  const CACHE_DURATION = 300000 // 5 minutes cache (increased from 60s for better hit rate)
-  const STALE_DURATION = 60000 // 1 minute stale duration
-  const BACKGROUND_REFRESH_DURATION = 30000 // 30 seconds background refresh
+  // Setup realtime subscriptions
+  const setupRealtimeSubscriptions = useCallback(() => {
+    // Cleanup existing subscriptions
+    realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe())
+    realtimeSubscriptionsRef.current = []
 
-  // Check if cache is valid
-  const isCacheValid = (cacheKey: keyof typeof cacheRef.current) => {
-    const cache = cacheRef.current[cacheKey]
-    if (!cache || cache.timestamp === 0) {
-      return false
-    }
-    
-    const isValid = Date.now() - cache.timestamp < CACHE_DURATION && !cache.stale
-    
-    return isValid
-  }
-
-  // Check if cache is stale (for background refresh)
-  const isCacheStale = (cacheKey: keyof typeof cacheRef.current) => {
-    const cache = cacheRef.current[cacheKey]
-    if (!cache || cache.timestamp === 0) return true
-    return Date.now() - cache.timestamp > STALE_DURATION
-  }
-
-  // Check if filters match cache - improved logic
-  const doFiltersMatch = (currentFilters: any) => {
-    const cachedFilters = cacheRef.current.requests.filters
-    if (!cachedFilters && !currentFilters) return true // Both null/undefined
-    if (!cachedFilters || !currentFilters) return false // One is null/undefined
-    
-    // Deep comparison for better accuracy
-    const currentKeys = Object.keys(currentFilters).sort()
-    const cachedKeys = Object.keys(cachedFilters).sort()
-    
-    if (currentKeys.length !== cachedKeys.length) return false
-    
-    return currentKeys.every(key => {
-      const currentValue = currentFilters[key]
-      const cachedValue = cachedFilters[key]
-      return currentValue === cachedValue || 
-             (currentValue === null && cachedValue === null) ||
-             (currentValue === undefined && cachedValue === undefined)
-    })
-  }
-
-  // Mark cache as stale
-  const markCacheStale = useCallback((cacheKey?: keyof typeof cacheRef.current) => {
-    if (cacheKey) {
-      cacheRef.current[cacheKey].stale = true
-    } else {
-      // Mark all cache as stale
-      Object.keys(cacheRef.current).forEach(key => {
-        cacheRef.current[key as keyof typeof cacheRef.current].stale = true
+    // Requests subscription
+    const requestsChannel = getSupabaseClient()
+      .channel('rental_requests_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'rental_requests' },
+        (payload) => {
+          // Use setData directly to avoid dependency issues
+          setData(prev => {
+            const { requests } = prev
+            let newRequests = [...requests]
+            
+            switch (payload.eventType) {
+              case 'INSERT':
+                newRequests.unshift(payload.new as RentalRequest)
+                break
+              case 'UPDATE':
+                newRequests = newRequests.map(req => 
+                  req.id === payload.new.id ? { ...req, ...payload.new } : req
+                )
+                break
+              case 'DELETE':
+                newRequests = newRequests.filter(req => req.id !== payload.old.id)
+                break
+            }
+            
+            return { ...prev, requests: newRequests }
+          })
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected')
+        } else if (status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('disconnected')
+        }
       })
-    }
-  }, [])
 
-  // Cache invalidation function - more selective
-  const invalidateCache = useCallback((cacheKey?: keyof typeof cacheRef.current) => {
-    if (cacheKey) {
-      cacheRef.current[cacheKey].timestamp = 0
-      cacheRef.current[cacheKey].stale = true
-    } else {
-      // Only invalidate requests cache by default (most frequently changing)
-      cacheRef.current.requests.timestamp = 0
-      cacheRef.current.requests.stale = true
-    }
-  }, [])
-
-  // Smart cache invalidation based on action type
-  const invalidateCacheByAction = useCallback((actionType: string) => {
-    switch (actionType) {
-      case 'approve':
-      case 'decline':
-      case 'complete':
-      case 'reopen':
-      case 'cancel':
-        // Only invalidate requests cache for request actions
-        cacheRef.current.requests.timestamp = 0
-        cacheRef.current.requests.stale = true
-        break
-      case 'fleet_status':
-      case 'fleet_delete':
-        // Only invalidate fleet cache for fleet actions
-        cacheRef.current.fleet.timestamp = 0
-        cacheRef.current.fleet.stale = true
-        break
-      default:
-        // For unknown actions, invalidate requests only
-        cacheRef.current.requests.timestamp = 0
-        cacheRef.current.requests.stale = true
-    }
-  }, [])
-
-  // Background prefetch function
-  const backgroundPrefetch = useCallback(async () => {
-    if (loadingRef.current) return
-
-    try {
-      const fetchPromises = []
-      
-      // Only prefetch stale data
-      if (isCacheStale('requests')) {
-        fetchPromises.push(
-          RentalRequestService.fetchRequests(1, 100).then(result => {
-            if (!result.error) {
-              cacheRef.current.requests = {
-                data: result.data || [],
-                timestamp: Date.now(),
-                filters: { ...filters },
-                stale: false
-              }
-              // Update data silently (no loading state)
-              setData(prev => ({ ...prev, requests: result.data || [] }))
+    // Fleet subscription
+    const fleetChannel = getSupabaseClient()
+      .channel('fleet_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'fleet' },
+        (payload) => {
+          // Use setData directly to avoid dependency issues
+          setData(prev => {
+            const { fleet } = prev
+            let newFleet = [...fleet]
+            
+            switch (payload.eventType) {
+              case 'INSERT':
+                newFleet.unshift(payload.new)
+                break
+              case 'UPDATE':
+                newFleet = newFleet.map(item => 
+                  item.id === payload.new.id ? { ...item, ...payload.new } : item
+                )
+                break
+              case 'DELETE':
+                newFleet = newFleet.filter(item => item.id !== payload.old.id)
+                break
             }
-            return { type: 'requests', data: result.data || [] }
-          }).catch(() => ({ type: 'requests', error: 'Background fetch failed' }))
-        )
-      }
-      
-      if (isCacheStale('fleet')) {
-        fetchPromises.push(
-          RentalRequestService.fetchFleet().then(result => {
-            if (!result.error) {
-              cacheRef.current.fleet = {
-                data: result.data || [],
-                timestamp: Date.now(),
-                stale: false
-              }
-              setData(prev => ({ ...prev, fleet: result.data || [] }))
-            }
-            return { type: 'fleet', data: result.data || [] }
-          }).catch(() => ({ type: 'fleet', error: 'Background fetch failed' }))
-        )
-      }
-      
-      if (isCacheStale('stats')) {
-        fetchPromises.push(
-          RentalRequestService.fetchDashboardStats().then(result => {
-            if (!result.error) {
-              cacheRef.current.stats = {
-                data: result.data,
-                timestamp: Date.now(),
-                stale: false
-              }
-              setData(prev => ({ ...prev, stats: result.data }))
-            }
-            return { type: 'stats', data: result.data }
-          }).catch(() => ({ type: 'stats', error: 'Background fetch failed' }))
-        )
-      }
-      
-      if (fetchPromises.length > 0) {
-        await Promise.allSettled(fetchPromises)
-      }
-    } catch (err) {
-      console.warn('Background prefetch failed:', err)
-    }
-  }, [filters])
+            
+            return { ...prev, fleet: newFleet }
+          })
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected')
+        } else if (status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('disconnected')
+        }
+      })
 
-  // Setup background prefetch interval
-  useEffect(() => {
-    const interval = setInterval(() => {
-      backgroundPrefetch()
-    }, BACKGROUND_REFRESH_DURATION)
-
-    return () => clearInterval(interval)
-  }, [backgroundPrefetch])
+    realtimeSubscriptionsRef.current.push(requestsChannel, fleetChannel)
+  }, [setRealtimeStatus])
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
     if (loadingRef.current && !isManualRefresh) return
@@ -316,115 +360,27 @@ const useDataFetching = (
     setError(null)
     
     try {
-      // Check cache first (unless manual refresh)
-      if (!isManualRefresh) {
-        let hasValidCache = false
-        
-        // Check requests cache
-        if (isCacheValid('requests') && doFiltersMatch(filters)) {
-          setData(prev => ({ ...prev, requests: cacheRef.current.requests.data }))
-          hasValidCache = true
-        }
-        
-        // Check fleet cache
-        if (isCacheValid('fleet')) {
-          setData(prev => ({ ...prev, fleet: cacheRef.current.fleet.data }))
-          hasValidCache = true
-        }
-        
-        // Check stats cache
-        if (isCacheValid('stats')) {
-          setData(prev => ({ ...prev, stats: cacheRef.current.stats.data }))
-          hasValidCache = true
-        }
+      if (isManualRefresh && RentalRequestService && typeof RentalRequestService.clearCache === 'function') {
+        RentalRequestService.clearCache()
+      }
+      
+      const [requestsResult, fleetResult, statsResult] = await Promise.all([
+        RentalRequestService.fetchRequests(1, 100),
+        RentalRequestService.fetchFleet(),
+        RentalRequestService.fetchDashboardStats()
+      ])
 
-        // If we have valid cache for all data, skip loading state
-        if (hasValidCache && isCacheValid('requests') && isCacheValid('fleet') && isCacheValid('stats')) {
-          setLoading(false)
-          loadingRef.current = false
-          return
-        }
+      if (requestsResult.error) setError(requestsResult.error)
+      if (fleetResult.error) setError(fleetResult.error)
+      if (statsResult.error) setError(statsResult.error)
+
+      const newData = {
+        requests: requestsResult.data || [],
+        fleet: fleetResult.data || [],
+        stats: statsResult.data
       }
       
-      // Clear cache on manual refresh
-      if (isManualRefresh) {
-        invalidateCache()
-        if (RentalRequestService && typeof RentalRequestService.clearCache === 'function') {
-          RentalRequestService.clearCache()
-        }
-      }
-      
-      // Fetch data with caching
-      const fetchPromises = []
-      
-      // Fetch requests (with cache check)
-      if (isManualRefresh || !isCacheValid('requests') || !doFiltersMatch(filters)) {
-        fetchPromises.push(
-          RentalRequestService.fetchRequests(1, 100).then(result => {
-            if (!result.error) {
-              cacheRef.current.requests = {
-                data: result.data || [],
-                timestamp: Date.now(),
-                filters: { ...filters },
-                stale: false
-              }
-              return { type: 'requests', data: result.data || [] }
-            }
-            return { type: 'requests', error: result.error }
-          })
-        )
-      }
-      
-      // Fetch fleet (with cache check)
-      if (isManualRefresh || !isCacheValid('fleet')) {
-        fetchPromises.push(
-          RentalRequestService.fetchFleet().then(result => {
-            if (!result.error) {
-              cacheRef.current.fleet = {
-                data: result.data || [],
-                timestamp: Date.now(),
-                stale: false
-              }
-              return { type: 'fleet', data: result.data || [] }
-            }
-            return { type: 'fleet', error: result.error }
-          })
-        )
-      }
-      
-      // Fetch stats (with cache check)
-      if (isManualRefresh || !isCacheValid('stats')) {
-        fetchPromises.push(
-          RentalRequestService.fetchDashboardStats().then(result => {
-            if (!result.error) {
-              cacheRef.current.stats = {
-                data: result.data,
-                timestamp: Date.now(),
-                stale: false
-              }
-              return { type: 'stats', data: result.data }
-            }
-            return { type: 'stats', error: result.error }
-          })
-        )
-      }
-      
-      // Wait for all fetches to complete
-      if (fetchPromises.length > 0) {
-        const results = await Promise.all(fetchPromises)
-        
-        results.forEach(result => {
-          if (result.error) {
-            setError(result.error)
-          } else {
-            setData(prev => ({
-              ...prev,
-              [result.type]: result.data
-            }))
-          }
-        })
-      }
-      
+      setData(newData)
       setLastFetch(new Date())
     } catch (err) {
       console.error('Error in fetchData:', err)
@@ -434,7 +390,7 @@ const useDataFetching = (
       setLoading(false)
       loadingRef.current = false
     }
-  }, [filters, notify, invalidateCache])
+  }, [])
 
   const debouncedFetch = useCallback((isManualRefresh = false) => {
     if (fetchTimeoutRef.current) {
@@ -452,193 +408,45 @@ const useDataFetching = (
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current)
       }
-      if (prefetchTimeoutRef.current) {
-        clearTimeout(prefetchTimeoutRef.current)
-      }
+      // Cleanup realtime subscriptions
+      realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe())
     }
   }, [])
 
-  // Initialize data function
-  const initializeData = useCallback(async () => {
-    // console.log('Initializing dashboard data...')
-    await fetchData(true) // Force initial fetch
-  }, [fetchData])
-
-  // Initialize data and setup real-time subscriptions
+  // Initial data fetch and realtime setup - only run once
   useEffect(() => {
-    // console.log('Setting up real-time subscriptions (inlined)...');
-    // console.log('Session state:', { session: !!session, sessionAccessToken: !!session?.access_token });
+    if (initializedRef.current) return;
+    initializedRef.current = true;
     
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      initializeData();
-    }
+    // Fetch data without showing loading state initially
+    const initializeData = async () => {
+      try {
+        const [requestsResult, fleetResult, statsResult] = await Promise.all([
+          RentalRequestService.fetchRequests(1, 100),
+          RentalRequestService.fetchFleet(),
+          RentalRequestService.fetchDashboardStats()
+        ])
 
-    // Only setup real-time if session is available
-    if (session && session.access_token) {
-      // console.log('Session available, setting up real-time...');
-      
-      (async () => {
-        try {
-          // Cleanup existing subscriptions
-          // realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe());
-          // realtimeSubscriptionsRef.current = [];
-
-          // Create authenticated client for real-time subscriptions
-          const supabase = getSupabaseClient();
-
-          // Add connection timeout
-          // const connectionTimeout = setTimeout(() => {
-          //   console.log('Real-time connection timeout, falling back to polling');
-          //   setRealtimeStatus('disconnected');
-          //   notify.info('Real-time connection timeout. Using polling mode.');
-          // }, 10000); // 10 second timeout
-
-          // Rental Requests real-time subscription
-          // const requestsSubscription = supabase
-          //   .channel('rental_requests_realtime')
-          //   .on('postgres_changes',
-          //     {
-          //       event: '*',
-          //       schema: 'public',
-          //       table: 'rental_requests'
-          //     },
-          //     (payload: any) => {
-          //       console.log('Rental request change:', payload);
-          //       markCacheStale('requests');
-          //       markCacheStale('stats');
-          //       setData(prev => ({
-          //         ...prev,
-          //         requests: [...prev.requests]
-          //       }));
-          //     }
-          //   )
-          //   .subscribe((status) => {
-          //     console.log('Rental requests subscription status:', status);
-          //     if (status === 'CHANNEL_ERROR') {
-          //       console.error('Rental requests subscription failed:', status);
-          //       clearTimeout(connectionTimeout);
-          //       setRealtimeStatus('disconnected');
-          //       notify.error('Real-time connection failed. Using polling mode.');
-          //     } else if (status === 'SUBSCRIBED') {
-          //       console.log('Rental requests subscription successful');
-          //       clearTimeout(connectionTimeout);
-          //       setRealtimeStatus('connected');
-          //       notify.success('Real-time connection established');
-          //     } else if (status === 'CLOSED') {
-          //       console.log('Rental requests subscription closed');
-          //       clearTimeout(connectionTimeout);
-          //       setRealtimeStatus('disconnected');
-          //     }
-          //   });
-
-          // Fleet real-time subscription
-          // const fleetSubscription = supabase
-          //   .channel('fleet_realtime')
-          //   .on('postgres_changes',
-          //     {
-          //       event: '*',
-          //       schema: 'public',
-          //       table: 'fleet'
-          //     },
-          //     (payload: any) => {
-          //       console.log('Fleet change:', payload);
-          //       markCacheStale('fleet');
-          //       markCacheStale('stats');
-          //       setData(prev => ({
-          //         ...prev,
-          //         fleet: [...prev.fleet]
-          //       }));
-          //     }
-          //   )
-          //   .subscribe((status) => {
-          //     console.log('Fleet subscription status:', status);
-          //     if (status === 'CHANNEL_ERROR') {
-          //       console.error('Fleet subscription failed:', status);
-          //       clearTimeout(connectionTimeout);
-          //       setRealtimeStatus('disconnected');
-          //       notify.error('Real-time connection failed. Using polling mode.');
-          //     } else if (status === 'SUBSCRIBED') {
-          //       console.log('Fleet subscription successful');
-          //       clearTimeout(connectionTimeout);
-          //       setRealtimeStatus('connected');
-          //       notify.success('Real-time connection established');
-          //     } else if (status === 'CLOSED') {
-          //       console.log('Fleet subscription closed');
-          //       clearTimeout(connectionTimeout);
-          //       setRealtimeStatus('disconnected');
-          //     }
-          //   });
-
-          // realtimeSubscriptionsRef.current = [requestsSubscription, fleetSubscription];
-
-        } catch (error) {
-          console.error('Error setting up real-time subscriptions:', error);
-          // setRealtimeStatus('disconnected');
-          // notify.error('Failed to establish real-time connection. Using polling mode.');
+        const newData = {
+          requests: requestsResult.data || [],
+          fleet: fleetResult.data || [],
+          stats: statsResult.data
         }
-      })();
-    } else if (session === null) {
-      // Session is explicitly null (user not authenticated)
-      // console.log('No session available for real-time subscriptions');
-      // setRealtimeStatus('disconnected');
-    }
-    // If session is undefined, we're still loading, so don't do anything
-
-  }, [session, initializeData, setData])
-
-  // Cache warming function for better hit rates
-  const warmCache = useCallback(async () => {
-    try {
-      // Pre-fetch data to warm the cache
-      const [requestsResult, fleetResult, statsResult] = await Promise.allSettled([
-        RentalRequestService.fetchRequests(1, 100),
-        RentalRequestService.fetchFleet(),
-        RentalRequestService.fetchDashboardStats()
-      ])
-
-      // Update cache with successful results
-      if (requestsResult.status === 'fulfilled' && !requestsResult.value.error) {
-        cacheRef.current.requests = {
-          data: requestsResult.value.data || [],
-          timestamp: Date.now(),
-          filters: { ...filters },
-          stale: false
-        }
+        
+        setData(newData)
+        setLastFetch(new Date())
+        
+        // Setup realtime subscriptions after initial data load
+        setupRealtimeSubscriptions()
+      } catch (err) {
+        console.error('Error in initial data fetch:', err)
+        setError('Failed to load data')
+        notify.error('Failed to load data. Please refresh the page.')
       }
-
-      if (fleetResult.status === 'fulfilled' && !fleetResult.value.error) {
-        cacheRef.current.fleet = {
-          data: fleetResult.value.data || [],
-          timestamp: Date.now(),
-          stale: false
-        }
-      }
-
-      if (statsResult.status === 'fulfilled' && !statsResult.value.error) {
-        cacheRef.current.stats = {
-          data: statsResult.value.data,
-          timestamp: Date.now(),
-          stale: false
-        }
-      }
-
-      // console.log('Cache warmed successfully')
-    } catch (err) {
-      console.warn('Cache warming failed:', err)
     }
-  }, [filters])
-
-  // Warm cache on mount
-  useEffect(() => {
-    const warmTimer = setTimeout(() => {
-      warmCache()
-    }, 2000) // Warm cache 2 seconds after mount
-
-    return () => {
-      clearTimeout(warmTimer)
-    }
-  }, [warmCache])
+    
+    initializeData()
+  }, []) // Empty dependency array to prevent Fast Refresh reloads
 
   return {
     data,
@@ -646,7 +454,9 @@ const useDataFetching = (
     error,
     lastFetch,
     fetchData,
+    debouncedFetch,
     setData,
+    notify
   }
 }
 
@@ -664,19 +474,13 @@ interface DashboardContextType {
   tab: string
   autoRefreshEnabled: boolean
   refreshInterval: number
-  filters: {
-    userId: string | null
-    equipmentId: string | null
-    status: string | null
-  }
+  realtimeStatus: 'connected' | 'disconnected' | 'connecting'
   fetchData: (isManualRefresh?: boolean) => Promise<void>
-  setData: (data: { requests: RentalRequest[]; fleet: any[]; stats: any }) => void
+  debouncedFetch: (isManualRefresh?: boolean) => void
   setActionLoadingId: (id: string | null) => void
   setTab: (tab: string) => void
   setAutoRefreshEnabled: (enabled: boolean) => void
   setRefreshInterval: (interval: number) => void
-  setFilters: (newFilters: { userId?: string | null; equipmentId?: string | null; status?: string | null }) => void
-  clearFilters: () => void
   handleApprove: (id: string) => Promise<void>
   handleDecline: (id: string) => Promise<void>
   handleComplete: (id: string) => Promise<void>
@@ -708,26 +512,10 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   const [tab, setTab] = useState('dashboard')
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(60000)
-  const [filters, setFiltersState] = useState({
-    userId: null as string | null,
-    equipmentId: null as string | null,
-    status: null as string | null
-  })
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting')
 
-  // Get session from auth hook for real-time subscriptions
-  const { session } = useAuth()
-
-  // Use the new live data hook
-  const { data, loading, error, lastFetch, liveStatus, fetchData, setData } = useLiveDashboardData(filters)
-
-  // Optimized filter setters
-  const setFilters = useCallback((newFilters: { userId?: string | null; equipmentId?: string | null; status?: string | null }) => {
-    setFiltersState(prev => ({ ...prev, ...newFilters }))
-  }, [])
-
-  const clearFilters = useCallback(() => {
-    setFiltersState({ userId: null, equipmentId: null, status: null })
-  }, [])
+  // Use the data fetching hook
+  const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData, notify } = useDataFetching(setRealtimeStatus)
 
   // Service validation function
   const validateService = useCallback((serviceName: string, methodName: string) => {
@@ -742,7 +530,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     return true
   }, [])
 
-  // Action helpers
+  // Action handlers - moved inside provider
   const findRequest = useCallback((id: string) => {
     return data.requests.find(r => r.id === id)
   }, [data.requests])
@@ -750,6 +538,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   const logAudit = useCallback(async (action: string, details: any = {}) => {
     const { data: { user } } = await getSupabaseClient().auth.getUser()
     if (!user?.id) return
+    
     await getSupabaseClient().from('audit_log').insert([
       {
         action,
@@ -763,8 +552,316 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     ])
   }, [])
 
-  // Use split action handlers
-  const actions = useDashboardActions({ setData, fetchData, findRequest, logAudit })
+  const createActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, successMessage: string, optimisticUpdate?: (id: string) => void) => {
+    return async (id: string) => {
+      setActionLoadingId(id)
+      try {
+        const req = findRequest(id)
+        
+        // Apply optimistic update if provided
+        if (optimisticUpdate) {
+          optimisticUpdate(id)
+        }
+        
+        // Validate service method exists
+        if (!serviceMethod || typeof serviceMethod !== 'function') {
+          throw new Error(`Service method for ${actionType} is not available`)
+        }
+        
+        await serviceMethod(id)
+        notify.success(successMessage)
+        
+        await logAudit(`${actionType} rental request`, {
+          request_id: id,
+          equipment_id: req?.equipment_id,
+          equipment_name: req?.equipment?.name,
+          request_user_id: req?.user_id
+        })
+        
+      } catch (error) {
+        console.error(`Error in ${actionType} action:`, error)
+        notify.error(error instanceof Error ? error.message : `Failed to ${actionType.toLowerCase()} request`)
+        
+        // Revert optimistic update on error
+        setTimeout(() => {
+          debouncedFetch(true)
+        }, 100)
+      } finally {
+        setActionLoadingId(null)
+      }
+    }
+  }, [findRequest, logAudit, debouncedFetch])
+
+  const handleApprove = useCallback(
+    createActionHandler('Approved', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
+          throw new Error('RentalRequestService.approveRequest is not available')
+        }
+        return RentalRequestService.approveRequest(id)
+      }, 
+      'Request approved and equipment reserved!',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Approved' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'Reserved' } : f
+            ) : prev.fleet
+          }
+        })
+      }
+    ),
+    [createActionHandler]
+  )
+
+  const handleDecline = useCallback(
+    createActionHandler('Declined', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.declineRequest !== 'function') {
+          throw new Error('RentalRequestService.declineRequest is not available')
+        }
+        return RentalRequestService.declineRequest(id)
+      }, 
+      'Request declined.',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Declined' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+            ) : prev.fleet
+          }
+        })
+      }
+    ),
+    [createActionHandler]
+  )
+
+  const handleComplete = useCallback(
+    createActionHandler('Completed', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.completeRequest !== 'function') {
+          throw new Error('RentalRequestService.completeRequest is not available')
+        }
+        return RentalRequestService.completeRequest(id)
+      }, 
+      'Request marked as completed.',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Completed' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+            ) : prev.fleet
+          }
+        })
+      }
+    ),
+    [createActionHandler]
+  )
+
+  const handleReopen = useCallback(
+    createActionHandler('Reopened', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.reopenRequest !== 'function') {
+          throw new Error('RentalRequestService.reopenRequest is not available')
+        }
+        return RentalRequestService.reopenRequest(id)
+      }, 
+      'Request reopened.',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Reopened' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'In Use' } : f
+            ) : prev.fleet
+          }
+        })
+      }
+    ),
+    [createActionHandler]
+  )
+
+  const handleCancel = useCallback(
+    createActionHandler('Cancelled', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.cancelRequest !== 'function') {
+          throw new Error('RentalRequestService.cancelRequest is not available')
+        }
+        return RentalRequestService.cancelRequest(id)
+      }, 
+      'Request cancelled.',
+      (id: string) => {
+        setData(prev => {
+          const req = prev.requests.find(r => r.id === id)
+          return {
+            ...prev,
+            requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Cancelled' } : r
+            ),
+            fleet: req ? prev.fleet.map(f => 
+              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+            ) : prev.fleet
+          }
+        })
+      }
+    ),
+    [createActionHandler]
+  )
+
+  const createBulkActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>) => {
+    return async (ids: string[]) => {
+      if (!serviceMethod || typeof serviceMethod !== 'function') {
+        notify.error(`Service method for ${actionType} is not available`)
+        return
+      }
+
+      notify.info(`${actionType} ${ids.length} requests...`)
+      try {
+        await Promise.all(ids.map(id => serviceMethod(id)))
+        notify.success(`${ids.length} requests ${actionType.toLowerCase()} successfully.`)
+        
+        // Use a small delay for smoother UX
+        setTimeout(() => {
+          debouncedFetch()
+        }, 100)
+      } catch (error) {
+        console.error(`Error in bulk ${actionType} action:`, error)
+        notify.error(`Failed to ${actionType.toLowerCase()} all requests. ${error instanceof Error ? error.message : ''}`)
+      }
+    }
+  }, [debouncedFetch])
+
+  const handleBulkApprove = useCallback(
+    createBulkActionHandler('Approving', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
+          throw new Error('RentalRequestService.approveRequest is not available')
+        }
+        return RentalRequestService.approveRequest(id)
+      }
+    ),
+    [createBulkActionHandler]
+  )
+
+  const handleBulkDecline = useCallback(
+    createBulkActionHandler('Declining', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.declineRequest !== 'function') {
+          throw new Error('RentalRequestService.declineRequest is not available')
+        }
+        return RentalRequestService.declineRequest(id)
+      }
+    ),
+    [createBulkActionHandler]
+  )
+
+  const handleBulkDelete = useCallback(
+    createBulkActionHandler('Deleting', 
+      (id: string) => {
+        if (!RentalRequestService || typeof RentalRequestService.deleteRequest !== 'function') {
+          throw new Error('RentalRequestService.deleteRequest is not available')
+        }
+        return RentalRequestService.deleteRequest(id)
+      }
+    ),
+    [createBulkActionHandler]
+  )
+
+  const handleFleetDelete = useCallback(async (id: string) => {
+    setActionLoadingId(id)
+    try {
+      const { error } = await getSupabaseClient().from('fleet').delete().eq('id', id)
+      if (error) throw error
+      
+      notify.success('Fleet item deleted successfully.')
+      await logAudit('Deleted fleet item', { fleet_id: id })
+      debouncedFetch()
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : 'Failed to delete fleet item')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }, [logAudit, debouncedFetch])
+
+  const handleEdit = useCallback(async (id: string, updatedFields: any) => {
+    setActionLoadingId(id)
+    try {
+      const { error } = await getSupabaseClient().from('rental_requests').update(updatedFields).eq('id', id)
+      if (error) throw error
+      
+      notify.success('Request updated successfully.')
+      await logAudit('Updated rental request', { request_id: id, updated_fields: updatedFields })
+      debouncedFetch()
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : 'Failed to update request')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }, [logAudit, debouncedFetch])
+
+  const handleFleetStatusUpdate = async (fleetId: string, newStatus: string) => {
+    try {
+      // Optimistic update
+      setData(prev => ({
+        ...prev,
+        fleet: prev.fleet.map(item => 
+          item.id === fleetId ? { ...item, status: newStatus } : item
+        )
+      }))
+
+      await RentalRequestService.updateFleetStatus(fleetId, newStatus)
+      notify.success('Fleet status updated successfully')
+      
+      // Log audit if available
+      try {
+        const { data: { user } } = await getSupabaseClient().auth.getUser()
+        if (user?.id) {
+          await getSupabaseClient().from('audit_log').insert([
+            {
+              action: 'Updated fleet status',
+              user_id: user.id,
+              details: {
+                user_email: user.email,
+                user_name: user.user_metadata?.name,
+                fleet_id: fleetId,
+                new_status: newStatus
+              }
+            }
+          ])
+        }
+      } catch (auditError) {
+        console.error('Failed to log audit:', auditError)
+      }
+      
+    } catch (error) {
+      console.error('Error updating fleet status:', error)
+      notify.error('Error updating fleet status')
+      
+      // Revert optimistic update on error
+      setTimeout(() => {
+        debouncedFetch(true)
+      }, 100)
+    }
+  }
 
   const contextValue = {
     data,
@@ -775,24 +872,29 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     tab,
     autoRefreshEnabled,
     refreshInterval,
-    filters,
+    realtimeStatus,
     fetchData,
-    setData,
+    debouncedFetch,
     setActionLoadingId,
     setTab,
     setAutoRefreshEnabled,
     setRefreshInterval,
-    setFilters,
-    clearFilters,
-    ...actions,
+    // Action handlers
+    handleApprove,
+    handleDecline,
+    handleComplete,
+    handleReopen,
+    handleCancel,
+    handleBulkApprove,
+    handleBulkDecline,
+    handleBulkDelete,
+    handleFleetDelete,
+    handleFleetStatusUpdate,
+    handleEdit
   }
 
   return (
     <DashboardContext.Provider value={contextValue}>
-      <div className="flex items-center gap-2 px-4 py-1">
-        {liveStatus === 'live' && <Badge variant="green">LIVE</Badge>}
-        {liveStatus === 'polling' && <Badge variant="yellow">POLLING</Badge>}
-      </div>
       {children}
     </DashboardContext.Provider>
   )
@@ -836,14 +938,13 @@ const DashboardContent = ({
     tab,
     autoRefreshEnabled,
     refreshInterval,
+    realtimeStatus,
     fetchData,
-    setData,
+    debouncedFetch,
     setActionLoadingId,
     setTab,
     setAutoRefreshEnabled,
     setRefreshInterval,
-    setFilters,
-    clearFilters,
     handleApprove,
     handleDecline,
     handleComplete,
@@ -853,8 +954,8 @@ const DashboardContent = ({
     handleBulkDecline,
     handleBulkDelete,
     handleFleetDelete,
-    handleFleetStatusUpdate,
     handleEdit,
+    handleFleetStatusUpdate
   } = useDashboard()
 
   // Memoize expensive calculations
@@ -872,11 +973,11 @@ const DashboardContent = ({
     if (!autoRefreshEnabled) return
 
     const interval = setInterval(() => {
-      fetchData(true)
+      debouncedFetch()
     }, refreshInterval)
 
     return () => clearInterval(interval)
-  }, [autoRefreshEnabled, refreshInterval, fetchData])
+  }, [autoRefreshEnabled, refreshInterval, debouncedFetch])
 
   // Load audit log when tab changes
   useEffect(() => {
@@ -935,7 +1036,7 @@ const DashboardContent = ({
       
       // Use a small delay for smoother UX
       setTimeout(() => {
-        fetchData(true)
+        debouncedFetch()
       }, 100)
     } catch (error) {
       console.error('Error in delete action:', error)
@@ -943,7 +1044,7 @@ const DashboardContent = ({
     } finally {
       setActionLoadingId(null)
     }
-  }, [deleteDialog, fetchData])
+  }, [deleteDialog, debouncedFetch])
 
   const handleDirectDeleteCancel = useCallback(() => {
     setDeleteDialog({ open: false, id: null, row: null })
@@ -960,7 +1061,29 @@ const DashboardContent = ({
     { key: "settings", label: "Settings" },
   ]
 
-  // Optimized tab switching - instant and performant
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const urlTab = searchParams.get("tab") || "dashboard";
+
+  // Only update tab state if needed
+  useEffect(() => {
+    if (tab !== urlTab) setTab(urlTab);
+  }, [urlTab, tab]);
+
+  // Handle browser back/forward buttons for tab navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const newTab = urlParams.get('tab') || 'dashboard';
+      if (tab !== newTab) {
+        setTab(newTab);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [tab]);
+
   const handleTabChange = useCallback((value: string) => {
     if (tab === value) return; // Prevent unnecessary updates
     
@@ -971,9 +1094,13 @@ const DashboardContent = ({
     }
     
     setTab(value);
+    // Use pushState instead of router.replace for instant navigation
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', value);
+    window.history.pushState({}, '', url.toString());
   }, [tab]);
 
-  // Keyboard navigation for tabs - optimized for mobile
+  // Keyboard navigation for tabs
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only handle keyboard navigation when not in an input field
@@ -989,26 +1116,18 @@ const DashboardContent = ({
         case 'ArrowDown':
           event.preventDefault();
           const nextIndex = (currentIndex + 1) % tabOrder.length;
-          if (tabOrder[nextIndex] === 'home') {
-            window.location.href = '/'
-          } else {
-            handleTabChange(tabOrder[nextIndex]);
-          }
+          handleTabChange(tabOrder[nextIndex]);
           break;
         case 'ArrowLeft':
         case 'ArrowUp':
           event.preventDefault();
           const prevIndex = currentIndex === 0 ? tabOrder.length - 1 : currentIndex - 1;
-          if (tabOrder[prevIndex] === 'home') {
-            window.location.href = '/'
-          } else {
-            handleTabChange(tabOrder[prevIndex]);
-          }
+          handleTabChange(tabOrder[prevIndex]);
           break;
         case 'h':
         case 'H':
           event.preventDefault();
-          window.location.href = '/'
+          handleTabChange('home');
           break;
         case '1':
           event.preventDefault();
@@ -1033,139 +1152,317 @@ const DashboardContent = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [tab, handleTabChange]);
 
-  // Optimized tab content with lazy loading and smooth transitions
+  // Memoize tab content to prevent unnecessary re-renders
   const tabContent = useMemo(() => {
-    const tabComponents = {
-      dashboard: (
-        <Suspense fallback={
-          <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
-            <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              <DashboardCardSkeleton />
-              <DashboardCardSkeleton />
-              <DashboardCardSkeleton />
-              <DashboardCardSkeleton />
+    switch (tab) {
+      case 'dashboard':
+        return (
+          <TabContent tabKey="dashboard">
+            <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
+              <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                {loading ? (
+                  <>
+                    <DashboardCardSkeleton />
+                    <DashboardCardSkeleton />
+                    <DashboardCardSkeleton />
+                    <DashboardCardSkeleton />
+                  </>
+                ) : (
+                  <>
+                    <DashboardCard
+                      title="Active Rentals"
+                      value={dashboardStats.activeRentals}
+                      icon={Truck}
+                      description="Currently rented equipment"
+                    />
+                    <DashboardCard
+                      title="Fleet Available"
+                      value={dashboardStats.fleetAvailable}
+                      icon={CheckCircle}
+                      description="Ready for rental"
+                    />
+                    <DashboardCard
+                      title="Fleet In Use"
+                      value={dashboardStats.fleetInUse}
+                      icon={Clock}
+                      description="Currently in use"
+                    />
+                    <DashboardCard
+                      title="Pending Requests"
+                      value={dashboardStats.pendingRequests}
+                      icon={AlertCircle}
+                      description="Awaiting approval"
+                    />
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        }>
-          <DashboardTab 
-            loading={loading} 
-            dashboardStats={dashboardStats} 
-          />
-        </Suspense>
-      ),
-      requests: (
-        <Suspense fallback={<RequestsSkeleton />}>
-          <RequestsTab
-            loading={loading}
-            requests={requests}
-            error={error}
-            lastFetch={lastFetch}
-            actionLoadingId={actionLoadingId}
-            deleteDialog={deleteDialog}
-            detailsId={detailsId}
-            onRefresh={() => fetchData(true)}
-            onApprove={handleApprove}
-            onDecline={handleDecline}
-            onDelete={handleDeleteWrapper}
-            onEdit={handleEdit}
-            onComplete={handleComplete}
-            onReopen={handleReopen}
-            onCancel={handleCancel}
-            onViewDetails={handleViewDetails}
-            onBulkApprove={handleBulkApprove}
-            onBulkDecline={handleBulkDecline}
-            onBulkDelete={handleBulkDelete}
-            onDirectDeleteConfirm={handleDirectDeleteConfirm}
-            onDirectDeleteCancel={handleDirectDeleteCancel}
-            onSetDetailsId={setDetailsId}
-            onFilterByUser={async (userId: string) => {
-              setFilters({ userId })
-              await fetchData(true)
-            }}
-            onFilterByEquipment={async (equipmentId: string) => {
-              setFilters({ equipmentId })
-              await fetchData(true)
-            }}
-            onClearIndexedFilters={async () => {
-              clearFilters()
-              await fetchData(true)
-            }}
-          />
-        </Suspense>
-      ),
-      fleet: (
-        <Suspense fallback={
-          <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
-            <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              <FleetCardSkeleton />
-              <FleetCardSkeleton />
-              <FleetCardSkeleton />
-              <FleetCardSkeleton />
-            </div>
-          </div>
-        }>
-          <FleetTab
-            loading={loading}
-            fleet={fleet}
-            onFleetDelete={handleFleetDelete}
-            onFleetStatusUpdate={handleFleetStatusUpdate}
-          />
-        </Suspense>
-      ),
-      settings: (
-        <Suspense fallback={
-          <div className="max-w-4xl w-full mx-auto px-4 md:px-6 pb-12">
-            <div className="space-y-6">
-              <div className="h-32 bg-muted/50 rounded-lg animate-pulse" />
-              <div className="h-32 bg-muted/50 rounded-lg animate-pulse" />
-            </div>
-          </div>
-        }>
-          <SettingsTab
-            autoRefreshEnabled={autoRefreshEnabled}
-            refreshInterval={refreshInterval}
-            onSetAutoRefreshEnabled={setAutoRefreshEnabled}
-            onSetRefreshInterval={setRefreshInterval}
-          />
-        </Suspense>
-      )
-    }
+          </TabContent>
+        )
 
-    return tabComponents[tab as keyof typeof tabComponents] || tabComponents.dashboard
+      case 'requests':
+        return (
+          <TabContent tabKey="requests">
+            <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
+              {/* Header Section */}
+              <div className="mb-8">
+                <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
+                        Rental Requests
+                      </h2>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          realtimeStatus === 'connected' ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/50' :
+                          realtimeStatus === 'connecting' ? 'bg-yellow-500 animate-pulse shadow-lg shadow-yellow-500/50' :
+                          'bg-red-500 shadow-lg shadow-red-500/50'
+                        }`} />
+                        <span className={`text-sm font-medium ${
+                          realtimeStatus === 'connected' ? 'text-green-600' :
+                          realtimeStatus === 'connecting' ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {realtimeStatus === 'connected' ? 'Live' :
+                           realtimeStatus === 'connecting' ? 'Connecting' :
+                           'Disconnected'}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
+                      Manage and track all rental requests in the system with real-time updates and comprehensive controls
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs bg-gray-50/80 px-3 py-2 rounded-lg border border-gray-200/60">
+                      <span className="text-gray-600">Last updated:</span>
+                      <span className="font-medium text-gray-900">
+                        {lastFetch.toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => debouncedFetch(true)}
+                      disabled={loading && !getActionLoadingId()}
+                      className="h-10 md:h-9 gap-2 hover:bg-primary/5 hover:border-primary/30 transition-all duration-200"
+                    >
+                      <RefreshCwIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Table Section */}
+              <div className="space-y-4">
+                {loading ? (
+                  <DataTableSkeleton />
+                ) : (
+                  <DataTable
+                    data={requests as any}
+                    onApprove={handleApprove}
+                    onDecline={handleDecline}
+                    onDelete={handleDeleteWrapper}
+                    onEdit={handleEdit}
+                    onComplete={handleComplete}
+                    onReopen={handleReopen}
+                    onCancel={handleCancel}
+                    onViewDetails={handleViewDetails}
+                    onBulkApprove={handleBulkApprove}
+                    onBulkDecline={handleBulkDecline}
+                    onBulkDelete={handleBulkDelete}
+                    loading={false}
+                    error={error || undefined}
+                    actionLoadingId={getActionLoadingId()}
+                    pageSize={10}
+                    enablePagination={true}
+                    enableColumnVisibility={true}
+                    enableBulkActions={true}
+                  />
+                )}
+              </div>
+
+              {/* Delete Confirmation Dialog */}
+              <Dialog open={deleteDialog.open} onOpenChange={(open) => !open && handleDirectDeleteCancel()}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Trash2Icon className="h-5 w-5 text-destructive" />
+                      Delete Rental Request
+                    </DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to delete this rental request? This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {deleteDialog.row && (
+                    <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        <div><span className="font-medium">ID:</span> {deleteDialog.row.id}</div>
+                        <div><span className="font-medium">Status:</span> 
+                          <Badge variant="outline" className="ml-1">{deleteDialog.row.status}</Badge>
+                        </div>
+                        <div><span className="font-medium">Equipment:</span> {deleteDialog.row.equipment}</div>
+                        <div><span className="font-medium">Requester:</span> {deleteDialog.row.requester}</div>
+                        <div className="md:col-span-2">
+                          <span className="font-medium">Date:</span> {new Date(deleteDialog.row.date).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <DialogFooter className="gap-2">
+                    <Button variant="outline" onClick={handleDirectDeleteCancel} className="h-10 md:h-9">
+                      Cancel
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleDirectDeleteConfirm}
+                      className="gap-2 h-10 md:h-9"
+                    >
+                      <Trash2Icon className="h-4 w-4" />
+                      Delete Request
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Details Dialog */}
+              <Dialog open={!!detailsId} onOpenChange={open => setDetailsId(open ? detailsId : null)}>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <EyeIcon className="h-5 w-5" />
+                      Rental Request Details
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {requests.filter(r => r.id === detailsId).map(r => (
+                      <div key={r.id} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">Equipment:</span>
+                              <span className="text-sm">{typeof r.equipment === 'string' ? r.equipment : r.equipment?.name || "-"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">User:</span>
+                              <span className="text-sm">{r.user_id}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">Status:</span>
+                              <Badge variant={
+                                r.status === "Completed" ? "secondary" :
+                                r.status === "Pending" ? "outline" :
+                                r.status === "Cancelled" ? "destructive" : "default"
+                              }>
+                                {r.status}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">Start Date:</span>
+                              <span className="text-sm">{new Date(r.start_date).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">End Date:</span>
+                              <span className="text-sm">{new Date(r.end_date).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">Created:</span>
+                              <span className="text-sm">{new Date(r.date || r.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <span className="font-medium text-sm">Location:</span>
+                          <p className="text-sm bg-muted/50 p-2 rounded">{r.project_location}</p>
+                        </div>
+                        {r.notes && (
+                          <div className="space-y-2">
+                            <span className="font-medium text-sm">Notes:</span>
+                            <p className="text-sm bg-muted/50 p-2 rounded">{r.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDetailsId(null)} className="h-10 md:h-9">
+                      Close
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </TabContent>
+        )
+
+      case 'fleet':
+        return (
+          <TabContent tabKey="fleet">
+            <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
+              <div className="space-y-4">
+                {loading ? (
+                  <>
+                    <FleetCardSkeleton />
+                    <FleetCardSkeleton />
+                    <FleetCardSkeleton />
+                  </>
+                ) : emptyFleet ? (
+                  <div className="text-center py-8 text-muted-foreground">No fleet vehicles found.</div>
+                ) : (
+                  fleet
+                    .slice()
+                    .sort((a, b) => a.id.localeCompare(b.id))
+                    .map(eq => (
+                      <FleetCard
+                        key={eq.id}
+                        eq={eq}
+                        onStatus={async (id: string, status: string) => {
+                          setActionLoadingId(id)
+                          try {
+                            await handleFleetStatusUpdate(id, status)
+                          } catch (error) {
+                            console.error('Error updating fleet status:', error)
+                            notify.error('Error updating fleet status')
+                          } finally {
+                            setActionLoadingId(null)
+                          }
+                        }}
+                        onDelete={handleFleetDelete}
+                        loadingId={getActionLoadingId()}
+                      />
+                    ))
+                )}
+              </div>
+            </div>
+          </TabContent>
+        )
+
+      case 'settings':
+        return (
+          <TabContent tabKey="settings">
+            <div className="max-w-xl mx-auto px-4 md:px-6 pb-12">
+              <div className="bg-card p-6 md:p-8 rounded-xl border border-border">
+                <h2 className="text-lg md:text-xl font-bold mb-4 text-primary">Settings</h2>
+                <div className="text-muted-foreground text-sm md:text-base">More settings coming soon...</div>
+              </div>
+            </div>
+          </TabContent>
+        )
+
+      default:
+        return null
+    }
   }, [
-    tab,
-    loading,
-    dashboardStats,
-    requests,
-    error,
-    lastFetch,
-    actionLoadingId,
-    deleteDialog,
-    detailsId,
-    fleet,
-    autoRefreshEnabled,
-    refreshInterval,
-    fetchData,
-    handleApprove,
-    handleDecline,
-    handleDeleteWrapper,
-    handleEdit,
-    handleComplete,
-    handleReopen,
-    handleCancel,
-    handleViewDetails,
-    handleBulkApprove,
-    handleBulkDecline,
-    handleBulkDelete,
-    handleDirectDeleteConfirm,
-    handleDirectDeleteCancel,
-    setDetailsId,
-    setFilters,
-    clearFilters,
-    handleFleetDelete,
-    handleFleetStatusUpdate,
-    setAutoRefreshEnabled,
-    setRefreshInterval,
+    tab, loading, getActionLoadingId(), requests, fleet, emptyFleet, 
+    refreshInterval, autoRefreshEnabled, deleteDialog, detailsId,
+    dashboardStats, realtimeStatus, error,
+    handleApprove, handleDecline, handleEdit, handleComplete,
+    handleReopen, handleCancel, handleViewDetails, handleBulkApprove, handleBulkDecline,
+    handleBulkDelete, handleFleetDelete, debouncedFetch, fetchAuditLog,
+    setAuditOpen, setRefreshInterval, setAutoRefreshEnabled, setDetailsId, TabContent
   ])
 
   return (
@@ -1209,25 +1506,7 @@ const TabContent = React.memo(({ children, tabKey }: { children: React.ReactNode
   </div>
 ))
 
-// Debug component to show JWT payload
-function DebugJWT() {
-  const { session } = useAuth();
-  if (!session) return <div style={{color: 'red'}}>No session</div>;
-  let payload = null;
-  try {
-    payload = JSON.parse(atob(session.access_token.split('.')[1]));
-  } catch (e) {
-    return <div style={{color: 'red'}}>Invalid JWT</div>;
-  }
-  return (
-    <pre style={{background: '#f5f5f5', color: '#333', padding: 12, borderRadius: 6, marginBottom: 16}}>
-      {JSON.stringify(payload, null, 2)}
-    </pre>
-  );
-}
-
-// Client component for the dashboard
-function DashboardClient() {
+export default function Page() {
   const [auditOpen, setAuditOpen] = useState(false)
   const [auditLog, setAuditLog] = useState<any[]>([])
   const [expandedLog, setExpandedLog] = useState<string | null>(null)
@@ -1240,7 +1519,7 @@ function DashboardClient() {
   const [auditLogLoaded, setAuditLogLoaded] = useState(false);
 
   const router = useRouter()
-  const { user, session, loading: authLoading, isAdmin, isAuthenticated } = useAuth()
+  const { user, loading: authLoading, isAdmin, isAuthenticated } = useAuth()
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -1258,13 +1537,11 @@ function DashboardClient() {
     if (auditLogLoaded) return; // Skip if already loaded
     
     try {
-      // OPTIMIZED: Use the new indexed method for better performance
-      // This will use the audit_log_user_id_idx index
-      const { data, error } = await RentalRequestService.fetchAuditLogByUser(
-        user?.id || '', // Replace with actual user ID when needed
-        1, // page
-        50 // pageSize
-      )
+      const { data, error } = await getSupabaseClient()
+        .from('audit_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
       
       if (!error) {
         setAuditLog(data || [])
@@ -1273,7 +1550,7 @@ function DashboardClient() {
     } catch (error) {
       console.error('Failed to load audit log:', error)
     }
-  }, [auditLogLoaded, user?.id])
+  }, [auditLogLoaded])
 
   // Validate service availability
   if (!RentalRequestService) {
@@ -1329,33 +1606,21 @@ function DashboardClient() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-white">
-      <DashboardProvider>
-        <DashboardContent 
-          user={user}
-          auditOpen={auditOpen}
-          setAuditOpen={setAuditOpen}
-          auditLog={auditLog}
-          expandedLog={expandedLog}
-          setExpandedLog={setExpandedLog}
-          detailsId={detailsId}
-          setDetailsId={setDetailsId}
-          deleteDialog={deleteDialog}
-          setDeleteDialog={setDeleteDialog}
-          auditLogLoaded={auditLogLoaded}
-          fetchAuditLog={fetchAuditLog}
-        />
-      </DashboardProvider>
-    </div>
+    <DashboardProvider>
+      <DashboardContent 
+        user={user}
+        auditOpen={auditOpen}
+        setAuditOpen={setAuditOpen}
+        auditLog={auditLog}
+        expandedLog={expandedLog}
+        setExpandedLog={setExpandedLog}
+        detailsId={detailsId}
+        setDetailsId={setDetailsId}
+        deleteDialog={deleteDialog}
+        setDeleteDialog={setDeleteDialog}
+        auditLogLoaded={auditLogLoaded}
+        fetchAuditLog={fetchAuditLog}
+      />
+    </DashboardProvider>
   )
-}
-
-// Main page component
-export default function Page() {
-  return (
-    <>
-      <DebugJWT />
-      <DashboardClient />
-    </>
-  );
 }
