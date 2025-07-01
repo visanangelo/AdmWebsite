@@ -7,7 +7,7 @@ import { SiteHeader } from "@/features/shared/components/layout/site-header"
 import { SidebarInset, SidebarProvider } from "@/features/shared/components/ui/sidebar"
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { getSupabaseClient } from "@/lib/supabaseClient"
-import { useNotify } from '@/hooks/useNotify'
+import { useNotify } from '@/features/shared/hooks/useNotify'
 import { useRouter } from "next/navigation"
 import { Button } from "@/features/shared/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/features/shared/components/ui/dialog"
@@ -19,7 +19,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/features/shared/comp
 import { Truck, CheckCircle, Clock, AlertCircle, RefreshCwIcon, Trash2Icon, EyeIcon } from "lucide-react"
 import { Badge } from "@/features/shared/components/ui/badge"
 import { RentalRequest, FleetItem } from '@/types/rental'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuth } from '@/features/shared/hooks/use-auth'
 import type { FleetStatus } from '@/types/rental'
 
 // Add missing types

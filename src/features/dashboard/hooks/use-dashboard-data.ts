@@ -129,7 +129,7 @@ export const useDashboardData = (setRealtimeStatus: (status: 'connected' | 'disc
         abortControllerRef.current.abort()
       }
     }
-  }, [filters])
+  }, [filters, fetchData])
 
   // --- REALTIME SUBSCRIPTION LOGIC ---
   useEffect(() => {

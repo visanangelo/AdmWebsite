@@ -31,17 +31,15 @@ export function Navbar() {
   const router = useRouter()
   const { loading, signOut, isAdmin, isAuthenticated } = useAuth()
 
-  // Memoized scroll handler with debouncing
-  const handleScroll = useCallback(
-    debounce(() => {
-      setIsScrolled(window.scrollY > 0)
-    }, 10),
-    []
-  )
+  // Stable scroll handler
+  const handleScroll = useCallback(() => {
+    setIsScrolled(window.scrollY > 0)
+  }, [])
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
+    const debounced = debounce(handleScroll, 10)
+    window.addEventListener("scroll", debounced, { passive: true })
+    return () => window.removeEventListener("scroll", debounced)
   }, [handleScroll])
 
   // Prevent body scroll when mobile menu is open
