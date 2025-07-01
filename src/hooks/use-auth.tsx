@@ -167,7 +167,7 @@ export function useAuth() {
     return () => {
       mountedRef.current = false
       if (subscriptionRef.current) {
-        (subscriptionRef.current as any).unsubscribe()
+        (subscriptionRef.current as { unsubscribe: () => void }).unsubscribe()
       }
     }
   }, [getInitialUser, handleAuthStateChange])

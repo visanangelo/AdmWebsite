@@ -9,8 +9,6 @@ import {
   VisibilityState,
   flexRender,
   getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
   getPaginationRowModel,
@@ -20,7 +18,6 @@ import {
 import {
   MoreVerticalIcon,
   SearchIcon,
-  FilterIcon,
   X,
   ChevronDownIcon,
   ChevronUpIcon,
@@ -32,7 +29,6 @@ import {
   EyeIcon,
   RotateCcwIcon,
   BanIcon,
-  ClockIcon,
   AlertCircleIcon,
   DownloadIcon,
   RefreshCwIcon,
@@ -41,7 +37,6 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
-  MoreHorizontal,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useState, useEffect, useCallback, useMemo } from "react"
@@ -56,7 +51,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
@@ -91,7 +85,6 @@ import {
 } from "@/components/ui/tooltip"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ActionButtons } from './ActionButtons'
-import { RentalRequest, FleetItem } from '@/types/rental'
 import { useIsMobile } from "@/hooks/use-mobile"
 
 // Rename local Row interface to RentalRow

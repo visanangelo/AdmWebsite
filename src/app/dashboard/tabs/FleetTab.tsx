@@ -1,7 +1,5 @@
 import React from 'react'
 import { motion } from "framer-motion"
-import { Button } from "@/features/shared/components/ui/button"
-import { Badge } from "@/features/shared/components/ui/badge"
 import { Trash2Icon } from "lucide-react"
 import { FleetItem } from '@/features/shared'
 

@@ -1,5 +1,3 @@
-import type { Config } from 'tailwindcss'
-
 declare module 'tailwindcss' {
   export interface Config {
     darkMode?: string | string[]

@@ -68,4 +68,6 @@ export const DashboardCardSkeleton = () => (
       <Skeleton className="h-3 w-32" />
     </CardContent>
   </Card>
-) 
+)
+
+DashboardCard.displayName = 'DashboardCard'; 

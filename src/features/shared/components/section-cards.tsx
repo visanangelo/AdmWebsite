@@ -4,7 +4,6 @@ import { TrendingDownIcon, TrendingUpIcon } from "lucide-react"
 import { Badge } from "@/features/shared/components/ui/badge"
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,

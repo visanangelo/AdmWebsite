@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { RentalRequestService } from '@/features/rental-requests/services/rental-requests';
 import { RentalRequest } from '@/features/shared/types/rental';
 import { getSupabaseClient } from '@/features/shared/lib/supabaseClient';
-import type { FleetStatus, RentalRequestStatus } from '@/types/rental';
+import type { FleetStatus } from '@/types/rental';
 
 interface DashboardData {
   requests: RentalRequest[];
@@ -12,7 +12,6 @@ interface DashboardData {
 
 type SetData = (updater: (prev: DashboardData) => DashboardData) => void;
 type FetchData = (isManualRefresh?: boolean) => Promise<void>;
-type FindRequest = (id: string) => RentalRequest | undefined;
 type LogAudit = (action: string, details?: Record<string, unknown>) => Promise<void>;
 
 type Handler = (id: string) => Promise<void>;
@@ -20,10 +19,9 @@ type BulkHandler = (ids: string[]) => Promise<void>;
 type EditHandler = (id: string, updatedFields: Record<string, unknown>) => Promise<void>;
 type FleetStatusHandler = (fleetId: string, newStatus: FleetStatus) => Promise<void>;
 
-export function useDashboardActions({ setData, fetchData, findRequest, logAudit }: {
+export function useDashboardActions({ setData, fetchData, logAudit }: {
   setData: SetData;
   fetchData: FetchData;
-  findRequest: FindRequest;
   logAudit: LogAudit;
 }) {
   const handleApprove: Handler = useCallback(

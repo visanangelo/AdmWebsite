@@ -21,7 +21,6 @@ import { Badge } from "@/features/shared/components/ui/badge"
 import { RentalRequest, FleetItem } from '@/types/rental'
 import { useAuth } from '@/hooks/use-auth'
 import type { FleetStatus } from '@/types/rental'
-import type { User } from '@supabase/supabase-js'
 
 // Add missing types
 export interface DashboardStats {
@@ -304,7 +303,7 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
   // Setup realtime subscriptions
   const setupRealtimeSubscriptions = useCallback(() => {
     // Cleanup existing subscriptions
-    realtimeSubscriptionsRef.current.forEach(sub => (sub as any).unsubscribe())
+    realtimeSubscriptionsRef.current.forEach(sub => (sub as { unsubscribe: () => void }).unsubscribe())
     realtimeSubscriptionsRef.current = []
 
     // Requests subscription
@@ -415,9 +414,9 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
       if (statsResult.error) setError(statsResult.error)
 
       const newData = {
-        requests: requestsResult.data || [],
-        fleet: fleetResult.data || [],
-        stats: statsResult.data
+        requests: (requestsResult.data || []) as RentalRequest[],
+        fleet: (fleetResult.data || []) as unknown as FleetItem[],
+        stats: (statsResult.data ?? null) as unknown as DashboardStats | null
       }
       
       setData(newData)
@@ -449,7 +448,7 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
         clearTimeout(fetchTimeoutRef.current)
       }
       // Cleanup realtime subscriptions
-      realtimeSubscriptionsRef.current.forEach(sub => (sub as any).unsubscribe())
+      realtimeSubscriptionsRef.current.forEach(sub => (sub as { unsubscribe: () => void }).unsubscribe())
     }
   }, [])
 
@@ -468,9 +467,9 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
         ])
 
         const newData = {
-          requests: requestsResult.data || [],
-          fleet: fleetResult.data || [],
-          stats: statsResult.data
+          requests: (requestsResult.data || []) as RentalRequest[],
+          fleet: (fleetResult.data || []) as unknown as FleetItem[],
+          stats: (statsResult.data ?? null) as unknown as DashboardStats | null
         }
         
         setData(newData)
@@ -562,7 +561,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     return data.requests.find(r => r.id === id)
   }, [data.requests])
 
-  const logAudit = useCallback(async (action: string, details: any = {}) => {
+  const logAudit = useCallback(async (action: string, details: Record<string, unknown> = {}) => {
     const { data: { user } } = await getSupabaseClient().auth.getUser()
     if (!user?.id) return
     

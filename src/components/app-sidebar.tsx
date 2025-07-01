@@ -8,7 +8,6 @@ import {
   SettingsIcon,
   UserIcon,
   HomeIcon,
-  MenuIcon,
   SearchIcon,
   BellIcon,
   CommandIcon,
@@ -24,7 +23,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -76,7 +75,7 @@ const navMain = [
   },
 ]
 
-export function AppSidebar({ activeTab, role, onTabChange, ...props }: { activeTab?: string, role?: string, onTabChange?: (tab: string) => void } & React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ activeTab, onTabChange, ...props }: { activeTab?: string, onTabChange?: (tab: string) => void } & React.ComponentProps<typeof Sidebar>) {
   const isMobile = useIsMobile()
   const { setOpenMobile } = useSidebar()
   const filteredNav = navMain;

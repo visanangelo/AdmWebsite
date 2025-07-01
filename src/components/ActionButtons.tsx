@@ -4,7 +4,6 @@
  */
 import React from 'react';
 import { Button } from './ui/button';
-import { CheckCircleIcon, XCircleIcon, RotateCcwIcon } from 'lucide-react';
 
 /**
  * Represents a single action button's configuration.

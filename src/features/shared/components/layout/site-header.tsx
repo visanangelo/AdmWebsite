@@ -1,7 +1,5 @@
 import { Separator } from "@/features/shared/components/ui/separator"
 import { SidebarTrigger } from "@/features/shared/components/ui/sidebar"
-import { Badge } from "@/features/shared/components/ui/badge"
-import { Wifi, WifiOff, Loader2 } from "lucide-react"
 
 export function SiteHeader() {
   return (

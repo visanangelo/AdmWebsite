@@ -420,7 +420,7 @@ export default function HomePage() {
                           <Star key={i} className="h-5 w-5 text-yellow-500 fill-current" />
                         ))}
                       </div>
-                      <blockquote className="text-gray-700 leading-relaxed italic">"{testimonial.quote}"</blockquote>
+                      <blockquote className="text-gray-700 leading-relaxed italic">&quot;{testimonial.quote}&apos;</blockquote>
                       <div className="border-t border-gray-200 pt-6">
                         <div className="space-y-1">
                           <p className="font-bold text-gray-900">{testimonial.author}</p>

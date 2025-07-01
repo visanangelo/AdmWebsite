@@ -4,9 +4,6 @@
  */
 import React from 'react';
 import { Button } from '@/features/shared/components/ui/button';
-import { CheckCircleIcon, XCircleIcon, RotateCcwIcon } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/features/shared/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, Edit, Trash2, Clock, AlertCircle } from 'lucide-react';
 
 /**
  * Represents a single action button's configuration.

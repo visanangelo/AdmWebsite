@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react"
-import CountUp from "react-countup"
 import { useInView } from "react-intersection-observer"
+import CountUp from "react-countup"
 
 interface AnimatedStatProps {
   value: number

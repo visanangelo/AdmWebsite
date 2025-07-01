@@ -8,13 +8,11 @@ import {
   SettingsIcon,
   UserIcon,
   HomeIcon,
-  MenuIcon,
   BellIcon,
 } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/features/shared/components/ui/sidebar"
-import { Avatar, AvatarImage, AvatarFallback } from "@/features/shared/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/features/shared/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/features/shared/components/ui/dropdown-menu"
-import { Button } from "@/features/shared/components/ui/button"
 import { Badge } from "@/features/shared/components/ui/badge"
 import { useIsMobile } from "@/features/shared"
 
@@ -62,7 +60,7 @@ const navMain = [
   },
 ]
 
-export function AppSidebar({ activeTab, role, onTabChange, ...props }: { activeTab?: string, role?: string, onTabChange?: (tab: string) => void } & React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ activeTab, onTabChange, ...props }: { activeTab?: string, onTabChange?: (tab: string) => void } & React.ComponentProps<typeof Sidebar>) {
   const isMobile = useIsMobile()
   const { setOpenMobile } = useSidebar()
   const filteredNav = navMain;

@@ -10,7 +10,7 @@ import { cn } from "@/features/shared/lib/utils"
 import { Button } from '@/features/shared/components/ui/button'
 import { Input } from '@/features/shared/components/ui/input'
 import { Separator } from '@/features/shared/components/ui/separator'
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/features/shared/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/features/shared/components/ui/sheet'
 import { Skeleton } from '@/features/shared/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/features/shared/components/ui/tooltip'
 

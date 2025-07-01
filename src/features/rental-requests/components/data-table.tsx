@@ -9,8 +9,6 @@ import {
   VisibilityState,
   flexRender,
   getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
   getPaginationRowModel,
@@ -33,7 +31,6 @@ import {
   EyeIcon,
   RotateCcwIcon,
   BanIcon,
-  ClockIcon,
   AlertCircleIcon,
   DownloadIcon,
   RefreshCwIcon,
@@ -42,7 +39,6 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
-  MoreHorizontal,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useState, useEffect, useCallback, useMemo } from "react"
@@ -58,7 +54,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
 } from "@/features/shared/components/ui/dropdown-menu"
 import { Input } from "@/features/shared/components/ui/input"
 import {
@@ -98,7 +93,7 @@ import { RentalRequest, FleetItem } from '@/features/shared'
 import { useIsMobile } from '@/features/shared'
 
 // Rename local Row interface to RentalRow
-interface RentalRow {
+export interface RentalRow {
   id: string
   date: string
   requester: string
@@ -803,21 +798,6 @@ export function DataTable({
   const [dateTo, setDateTo] = useState("")
   const [pagination, setPagination] = useState(() => ({ pageIndex: 0, pageSize: 10 }))
 
-  // Memoized action handler to prevent unnecessary re-renders
-  const handleAction = useCallback(async (
-    action: (action: string, id: string) => Promise<void>,
-    id: string,
-    actionName: string,
-    ...args: unknown[]
-  ) => {
-    try {
-      await action(actionName, id);
-      // Do not show toast here; let parent handler show notifications
-    } catch (err) {
-      // Do not show toast here; let parent handler show notifications
-    }
-  }, [])
-
   const handleViewDetails = useCallback(async (id: string) => {
     if (onViewDetails) {
       await onViewDetails(id)
@@ -835,27 +815,27 @@ export function DataTable({
         break
       case 'Approve':
         if (onApprove) {
-          await handleAction(onApprove, id, "Approve")
+          await onApprove(id)
         }
         break
       case 'Decline':
         if (onDecline) {
-          await handleAction(onDecline, id, "Decline")
+          await onDecline(id)
         }
         break
       case 'Complete':
         if (onComplete) {
-          await handleAction(onComplete, id, "Complete")
+          await onComplete(id)
         }
         break
       case 'Reopen':
         if (onReopen) {
-          await handleAction(onReopen, id, "Reopen")
+          await onReopen(id)
         }
         break
       case 'Cancel':
         if (onCancel) {
-          await handleAction(onCancel, id, "Cancel")
+          await onCancel(id)
         }
         break
       case 'Edit':
@@ -865,13 +845,13 @@ export function DataTable({
         break
       case 'Reminder':
         if (onReminder) {
-          await handleAction(onReminder, id, "Reminder")
+          await onReminder(id)
         }
         break
       default:
         console.warn(`Unknown action: ${action}`)
     }
-  }, [data, onApprove, onDecline, onComplete, onReopen, onCancel, onEdit, onReminder, handleAction, handleViewDetails])
+  }, [data, onApprove, onDecline, onComplete, onReopen, onCancel, onEdit, onReminder, handleViewDetails])
 
   const handleClearSelection = useCallback(() => {
     setRowSelection({})
@@ -1024,14 +1004,14 @@ export function DataTable({
                   </DropdownMenuItem>
                   
                   {onEdit && (
-                    <DropdownMenuItem onClick={() => handleAction(onEdit, row.original.id, "Edit")}>
+                    <DropdownMenuItem onClick={() => handleQuickAction('Edit', row.original.id)}>
                       <EditIcon className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
                   )}
                   
                   {onReminder && (
-                    <DropdownMenuItem onClick={() => handleAction(onReminder, row.original.id, "Send Reminder")}>
+                    <DropdownMenuItem onClick={() => handleQuickAction('Reminder', row.original.id)}>
                       <AlertCircleIcon className="mr-2 h-4 w-4" />
                       Send Reminder
                     </DropdownMenuItem>
@@ -1041,7 +1021,7 @@ export function DataTable({
                   
                   {onDelete && (
                     <DropdownMenuItem 
-                      onClick={() => handleAction(onDelete, row.original.id, "Delete")}
+                      onClick={() => handleQuickAction('Delete', row.original.id)}
                       className="bg-red-100 text-red-800 focus:bg-red-200 focus:text-red-800"
                     >
                       <Trash2Icon className="mr-2 h-4 w-4" />
@@ -1058,7 +1038,7 @@ export function DataTable({
       enableHiding: false,
       size: 100,
     },
-  ], [handleQuickAction, handleViewDetails, handleAction, onEdit, onReminder, onDelete, actionLoadingId])
+  ], [handleQuickAction, handleViewDetails, onEdit, onReminder, onDelete, actionLoadingId])
 
   // Memoized table configuration for better performance
   const tableConfig = useMemo(() => ({

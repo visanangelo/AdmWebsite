@@ -3,12 +3,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Phone, Globe, LogIn, LogOut, User } from "lucide-react"
+import { X, Phone, Globe, LogIn, LogOut, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
-import { Suspense } from "react"
 import { Metadata } from "next"
 
 // Force dynamic rendering to prevent build-time errors

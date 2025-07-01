@@ -4,6 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { RefreshCwIcon, Trash2Icon, EyeIcon } from "lucide-react"
 import { RentalRequest } from '@/features/shared'
 import DataTableSkeleton from '../components/DataTableSkeleton'
+import { Button } from "@/features/shared/components/ui/button";
+import { Badge } from "@/features/shared/components/ui/badge";
+import type { RentalRow } from "@/features/rental-requests/components/data-table";
 
 interface RequestsTabProps {
   loading: boolean
@@ -102,7 +105,7 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
           <DataTableSkeleton />
         ) : (
           <DataTable
-            data={requests as RentalRequest}
+            data={requests as unknown as RentalRow[]}
             onApprove={onApprove}
             onDecline={onDecline}
             onDelete={onDelete}
