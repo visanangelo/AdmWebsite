@@ -769,7 +769,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId, setData])
 
   const handleCancel = useCallback(async (id: string) => {
     setActionLoadingId(id)
@@ -816,7 +816,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId, setData])
 
   const handleBulkApprove = useCallback(async (ids: string[]) => {
     if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
@@ -1036,7 +1036,6 @@ const DashboardContent = ({
     realtimeStatus,
     debouncedFetch,
     setActionLoadingId,
-    setData,
     handleApprove,
     handleDecline,
     handleComplete,
@@ -1464,7 +1463,8 @@ const DashboardContent = ({
     handleApprove, handleDecline, handleEdit, handleComplete,
     handleReopen, handleCancel, handleViewDetails, handleBulkApprove, handleBulkDecline,
     handleBulkDelete, handleFleetDelete, debouncedFetch, fetchAuditLog,
-    setDetailsId, notify, setActionLoadingId
+    setDetailsId, notify, setActionLoadingId, getActionLoadingId, handleDeleteWrapper, 
+    handleDirectDeleteCancel, handleDirectDeleteConfirm, handleFleetStatusUpdate, lastFetch
   ])
 
   return (
