@@ -1,6 +1,5 @@
 import React from 'react'
 import { Card, CardHeader, CardContent, CardTitle } from "@/features/shared/components/ui/card"
-import { Button } from "@/features/shared/components/ui/button"
 import { Switch } from "@/features/shared/components/ui/switch"
 import { Label } from "@/features/shared/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/shared/components/ui/select"

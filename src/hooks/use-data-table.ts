@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 
 export interface DataTableConfig<T> {
-  fetchData: (page: number, pageSize: number, filters?: any) => Promise<{
+  fetchData: (page: number, pageSize: number, filters?: Record<string, unknown>) => Promise<{
     data: T[]
     total: number
     error?: string
   }>
-  onAction?: (action: string, id: string, data?: any) => Promise<void>
+  onAction?: (action: string, id: string, data?: unknown) => Promise<void>
   optimisticUpdate?: (action: string, id: string, currentData: T[]) => T[]
 }
 
@@ -21,7 +21,7 @@ export function useDataTable<T extends { id: string }>(config: DataTableConfig<T
     pageSize: 10,
     total: 0
   })
-  const [filters, setFilters] = useState<any>({})
+  const [filters, setFilters] = useState<Record<string, unknown>>({})
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -50,7 +50,7 @@ export function useDataTable<T extends { id: string }>(config: DataTableConfig<T
   const handleAction = useCallback(async (
     action: string,
     id: string,
-    optimisticData?: any
+    optimisticData?: unknown
   ) => {
     if (!config.onAction) return
 
@@ -82,7 +82,7 @@ export function useDataTable<T extends { id: string }>(config: DataTableConfig<T
     }
   }, [config, fetchData])
 
-  const updateFilters = useCallback((newFilters: any) => {
+  const updateFilters = useCallback((newFilters: Record<string, unknown>) => {
     setFilters(newFilters)
     setPagination(prev => ({ ...prev, page: 1 })) // Reset to first page
   }, [])

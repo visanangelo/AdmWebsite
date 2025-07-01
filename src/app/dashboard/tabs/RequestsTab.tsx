@@ -1,8 +1,6 @@
 import React from 'react'
 import { DataTable } from "@/features/rental-requests"
-import { Button } from "@/features/shared/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/features/shared/components/ui/dialog"
-import { Badge } from "@/features/shared/components/ui/badge"
 import { RefreshCwIcon, Trash2Icon, EyeIcon } from "lucide-react"
 import { RentalRequest } from '@/features/shared'
 import DataTableSkeleton from '../components/DataTableSkeleton'
@@ -104,7 +102,7 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
           <DataTableSkeleton />
         ) : (
           <DataTable
-            data={requests as any}
+            data={requests as RentalRequest}
             onApprove={onApprove}
             onDecline={onDecline}
             onDelete={onDelete}

@@ -31,7 +31,7 @@ export function useAuth() {
     isAdmin: false
   })
   
-  const subscriptionRef = useRef<any>(null)
+  const subscriptionRef = useRef<unknown>(null)
   const mountedRef = useRef(true)
   const currentSessionIdRef = useRef<string | null>(null)
 
@@ -167,7 +167,7 @@ export function useAuth() {
     return () => {
       mountedRef.current = false
       if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe()
+        (subscriptionRef.current as any).unsubscribe()
       }
     }
   }, [getInitialUser, handleAuthStateChange])

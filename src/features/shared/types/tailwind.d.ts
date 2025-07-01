@@ -12,6 +12,6 @@ declare module 'tailwindcss' {
         animation: Record<string, string>
       }
     }
-    plugins: any[]
+    plugins: unknown[]
   }
 } 

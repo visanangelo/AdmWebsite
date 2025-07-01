@@ -117,7 +117,7 @@ class PerformanceMonitor {
   }
 
   // Log metrics (can be extended to send to analytics service)
-  private logMetric(type: string, data: any) {
+  private logMetric(type: string, data: Record<string, unknown>) {
     // Comment out to silence performance logs
     // if (process.env.NODE_ENV === 'development') {
     //   console.log(`[Performance] ${type}:`, data)
@@ -165,7 +165,7 @@ export const trackPerformance = {
 }
 
 // Debounce utility for performance optimization
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -180,7 +180,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // Throttle utility for performance optimization
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -198,7 +198,7 @@ export function throttle<T extends (...args: any[]) => any>(
 // Memory usage utility
 export function getMemoryUsage() {
   if (typeof performance !== 'undefined' && 'memory' in performance) {
-    const memory = (performance as any).memory
+    const memory = (performance as { memory: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory
     return {
       used: Math.round(memory.usedJSHeapSize / 1048576 * 100) / 100,
       total: Math.round(memory.totalJSHeapSize / 1048576 * 100) / 100,
@@ -211,7 +211,7 @@ export function getMemoryUsage() {
 // Network status utility
 export function getNetworkStatus() {
   if (typeof navigator !== 'undefined' && 'connection' in navigator) {
-    const connection = (navigator as any).connection
+    const connection = (navigator as { connection: { effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean } }).connection
     return {
       effectiveType: connection?.effectiveType || 'unknown',
       downlink: connection?.downlink || 0,

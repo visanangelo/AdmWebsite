@@ -4,8 +4,8 @@ import { validateRequiredFields, validateDateRange } from '@/lib/validation'
 
 // Cache management with separate timestamps for better performance
 let requestsCache: RentalRequest[] | null = null
-let fleetCache: any[] | null = null
-let statsCache: any | null = null
+let fleetCache: Record<string, unknown>[] | null = null
+let statsCache: Record<string, unknown> | null = null
 let requestsCacheTimestamp = 0
 let fleetCacheTimestamp = 0
 let statsCacheTimestamp = 0
@@ -56,7 +56,7 @@ class RentalRequestService {
         .select("id, user_id, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status)", { count: 'exact' })
 
       // Apply filters
-      if (filters?.status && filters.status !== ('all' as any)) {
+      if (filters?.status && filters.status !== 'all') {
         query = query.eq('status', filters.status as import('../types/rental').RentalRequestStatus)
       }
       
@@ -90,7 +90,7 @@ class RentalRequestService {
       }
 
       // Transform data to match expected format
-      const transformedData: RentalRequest[] = (data || []).map((r: any) => {
+      const transformedData: RentalRequest[] = (data || []).map((r: Record<string, unknown>) => {
         const equipmentData = Array.isArray(r.equipment) ? r.equipment[0] : r.equipment
         return {
           id: r.id as string,
@@ -128,7 +128,7 @@ class RentalRequestService {
     }
   }
 
-  static async fetchFleet(): Promise<{ data: any[]; error?: string }> {
+  static async fetchFleet(): Promise<{ data: Record<string, unknown>[]; error?: string }> {
     try {
       // Return cached data if valid
       if (fleetCache && this.isCacheValid(fleetCacheTimestamp)) {
@@ -159,7 +159,7 @@ class RentalRequestService {
     }
   }
 
-  static async fetchDashboardStats(): Promise<{ data: any; error?: string }> {
+  static async fetchDashboardStats(): Promise<{ data: Record<string, unknown>; error?: string }> {
     try {
       // Return cached data if valid
       if (statsCache && this.isCacheValid(statsCacheTimestamp)) {
@@ -181,7 +181,7 @@ class RentalRequestService {
       const fleetData = fleet || []
 
       // Calculate stats
-      const activeRentals = requestsData.filter((r: any) => 
+      const activeRentals = requestsData.filter((r: Record<string, unknown>) => 
         r.status === "Approved" && 
         (r.start_date as string) <= today && 
         (r.end_date as string) >= today
@@ -208,7 +208,7 @@ class RentalRequestService {
     } catch (error) {
       console.error('Unexpected error fetching stats:', error)
       return {
-        data: null,
+        data: {},
         error: error instanceof Error ? error.message : 'Failed to fetch dashboard stats'
       }
     }
@@ -323,7 +323,7 @@ class RentalRequestService {
         .eq('equipment_id', requestData.equipment_id)
         .eq('status', 'Approved');
 
-      const hasConflict = existingRequests?.some((req: any) => {
+      const hasConflict = existingRequests?.some((req: Record<string, unknown>) => {
         const reqStart = new Date(req.start_date as string);
         const reqEnd = new Date(req.end_date as string);
         const newStart = new Date(requestData.start_date);

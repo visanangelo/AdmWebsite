@@ -42,7 +42,7 @@ export interface RentalRequest {
  * Filters for querying rental requests.
  */
 export interface RentalRequestFilters {
-  status?: RentalRequestStatus;
+  status?: RentalRequestStatus | 'all';
   equipment?: string;
   dateFrom?: string;
   dateTo?: string;

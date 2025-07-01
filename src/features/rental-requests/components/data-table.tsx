@@ -16,6 +16,7 @@ import {
   getPaginationRowModel,
   useReactTable,
   Row,
+  Column,
 } from "@tanstack/react-table"
 import {
   MoreVerticalIcon,
@@ -107,7 +108,7 @@ interface RentalRow {
   start_date?: string
   end_date?: string
   project_location?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // interface DataTableProps
@@ -116,7 +117,7 @@ interface DataTableProps {
   onApprove?: (id: string) => Promise<void>
   onDecline?: (id: string) => Promise<void>
   onDelete?: (id: string) => Promise<void>
-  onEdit?: (id: string, updatedFields: any) => Promise<void>
+  onEdit?: (id: string, updatedFields: Record<string, unknown>) => Promise<void>
   onComplete?: (id: string) => Promise<void>
   onReopen?: (id: string) => Promise<void>
   onReminder?: (id: string) => Promise<void>
@@ -404,13 +405,13 @@ function DataTableToolbar({
   onFilterByEquipment,
   onClearIndexedFilters,
 }: {
-  table: any
+  table: ReturnType<typeof useReactTable<RentalRow>>
   onRefresh?: () => Promise<void>
   onExport?: (data: RentalRow[]) => void
   data: RentalRow[]
   enableColumnVisibility: boolean
-  columnFilters: any[]
-  setColumnFilters: (filters: any[]) => void
+  columnFilters: ColumnFiltersState
+  setColumnFilters: React.Dispatch<React.SetStateAction<ColumnFiltersState>>
   dateFrom: string
   setDateFrom: (date: string) => void
   dateTo: string
@@ -491,8 +492,8 @@ function DataTableToolbar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {table.getAllColumns()
-                  .filter((column: any) => column.getCanHide())
-                  .map((column: any) => {
+                  .filter((column: Column<RentalRow, unknown>) => column.getCanHide())
+                  .map((column: Column<RentalRow, unknown>) => {
                     return (
                       <DropdownMenuCheckboxItem
                         key={column.id}
@@ -599,17 +600,19 @@ function getStatusVariant(status: string) {
 }
 
 // Sortable header component
-function SortableHeader({ column, children }: { column: any; children: React.ReactNode }) {
+function SortableHeader({ column, children }: { column: Column<RentalRow, unknown>; children: React.ReactNode }) {
+  // getIsSorted can return boolean or 'asc' | 'desc', so handle both
+  const sorted = column.getIsSorted();
   return (
     <Button
       variant="ghost"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      onClick={() => column.toggleSorting(sorted === "asc")}
       className="h-8 px-2 font-normal"
     >
       {children}
-      {column.getIsSorted() === "asc" ? (
+      {sorted === "asc" ? (
         <ChevronUpIcon className="ml-2 h-4 w-4" />
-      ) : column.getIsSorted() === "desc" ? (
+      ) : sorted === "desc" ? (
         <ChevronDownIcon className="ml-2 h-4 w-4" />
       ) : (
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -619,7 +622,7 @@ function SortableHeader({ column, children }: { column: any; children: React.Rea
 }
 
 // Pagination Component
-function DataTablePagination({ table, pagination, setPagination }: { table: any, pagination: { pageIndex: number, pageSize: number }, setPagination: (p: { pageIndex: number, pageSize: number }) => void }) {
+function DataTablePagination({ table, pagination, setPagination }: { table: ReturnType<typeof useReactTable<RentalRow>>, pagination: { pageIndex: number, pageSize: number }, setPagination: (p: { pageIndex: number, pageSize: number }) => void }) {
   const [open, setOpen] = React.useState(false);
   const isMobile = useIsMobile();
   
@@ -701,7 +704,7 @@ function DataTablePagination({ table, pagination, setPagination }: { table: any,
 // Quick Action Buttons Component - Memoized for better performance
 const QuickActions = React.memo(({ row, onAction, actionLoadingId }: { 
   row: RentalRow; 
-  onAction: (action: string, id: string) => void;
+  onAction: (action: string, id: string) => Promise<void>;
   actionLoadingId: string | null | undefined;
 }) => {
   const { status, id } = row
@@ -756,7 +759,7 @@ const QuickActions = React.memo(({ row, onAction, actionLoadingId }: {
 QuickActions.displayName = 'QuickActions'
 
 // Remove globalStringFilterFn, only keep globalFuzzyFilterFn with types:
-function globalFuzzyFilterFn(row: Row<any>, columnId: string, filterValue: string) {
+function globalFuzzyFilterFn(row: Row<RentalRow>, columnId: string, filterValue: string) {
   // Search across all visible string columns
   const values = Object.values(row.original)
     .filter(v => typeof v === 'string')
@@ -802,13 +805,13 @@ export function DataTable({
 
   // Memoized action handler to prevent unnecessary re-renders
   const handleAction = useCallback(async (
-    action: (id: string, ...args: any[]) => Promise<void>,
+    action: (action: string, id: string) => Promise<void>,
     id: string,
     actionName: string,
-    ...args: any[]
+    ...args: unknown[]
   ) => {
     try {
-      await action(id, ...args)
+      await action(actionName, id);
       // Do not show toast here; let parent handler show notifications
     } catch (err) {
       // Do not show toast here; let parent handler show notifications
@@ -959,7 +962,7 @@ export function DataTable({
       header: ({ column }) => <SortableHeader column={column}>Status</SortableHeader>,
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => {
         const status = row.getValue("status") as string;
-        let variant: any = 'outline';
+        let variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'yellow' | 'green' | undefined = 'outline';
         let extraClass = '';
         if (status === 'Pending') variant = 'yellow';
         else if (status === 'Approved') variant = 'default';

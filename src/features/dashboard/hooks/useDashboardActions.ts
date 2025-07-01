@@ -6,18 +6,18 @@ import type { FleetStatus, RentalRequestStatus } from '@/types/rental';
 
 interface DashboardData {
   requests: RentalRequest[];
-  fleet: any[];
-  stats: any;
+  fleet: Record<string, unknown>[];
+  stats: Record<string, unknown>;
 }
 
 type SetData = (updater: (prev: DashboardData) => DashboardData) => void;
 type FetchData = (isManualRefresh?: boolean) => Promise<void>;
 type FindRequest = (id: string) => RentalRequest | undefined;
-type LogAudit = (action: string, details?: any) => Promise<void>;
+type LogAudit = (action: string, details?: Record<string, unknown>) => Promise<void>;
 
 type Handler = (id: string) => Promise<void>;
 type BulkHandler = (ids: string[]) => Promise<void>;
-type EditHandler = (id: string, updatedFields: any) => Promise<void>;
+type EditHandler = (id: string, updatedFields: Record<string, unknown>) => Promise<void>;
 type FleetStatusHandler = (fleetId: string, newStatus: FleetStatus) => Promise<void>;
 
 export function useDashboardActions({ setData, fetchData, findRequest, logAudit }: {
@@ -180,7 +180,7 @@ export function useDashboardActions({ setData, fetchData, findRequest, logAudit 
   );
 
   const handleEdit: EditHandler = useCallback(
-    async (id: string, updatedFields: any) => {
+    async (id: string, updatedFields: Record<string, unknown>) => {
       const { error } = await getSupabaseClient().from('rental_requests').update(updatedFields).eq('id', id);
       if (error) throw new Error(error.message);
       await logAudit('Edited rental request', { request_id: id, updated_fields: updatedFields });

@@ -23,7 +23,7 @@ const navigation = [
 ]
 
 // Debounce function for scroll events
-function debounce<T extends (...args: any[]) => any>(
+function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {

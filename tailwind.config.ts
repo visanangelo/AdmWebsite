@@ -1,6 +1,6 @@
 import type { Config } from "tailwindcss"
 
-const config: any = {
+const config: unknown = {
     content: [
         './pages/**/*.{ts,tsx}',
         './components/**/*.{ts,tsx}',
