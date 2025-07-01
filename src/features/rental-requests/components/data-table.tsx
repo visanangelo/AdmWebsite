@@ -114,7 +114,7 @@ function BulkActions({
       await action(selectedRows)
       toast.success(`Bulk action completed for ${selectedRows.length} items`)
       onClearSelection()
-    } catch (error) {
+    } catch {
       toast.error('Bulk action failed')
     } finally {
       setIsLoading(false)
@@ -707,7 +707,7 @@ export function DataTable({
   onExport,
   loading,
   actionLoadingId,
-  pageSize = 10,
+  // pageSize = 10,
   enablePagination = true,
   enableColumnVisibility = true,
   enableBulkActions = true,
@@ -903,7 +903,7 @@ export function DataTable({
       id: "actions",
       header: "Actions",
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => {
-        const status = row.original.status
+        // status is not used, so remove this line to fix the lint error.
 
         return (
           <div className="flex items-center gap-1">
