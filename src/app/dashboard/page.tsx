@@ -8,7 +8,7 @@ import { SidebarInset, SidebarProvider } from "@/features/shared/components/ui/s
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 import { useNotify } from '@/hooks/useNotify'
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/features/shared/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/features/shared/components/ui/dialog"
 import { Skeleton } from "@/features/shared/components/ui/skeleton"
@@ -930,6 +930,17 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   )
 }
 
+// TabContent component
+const TabContent = React.memo(function TabContent({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex-1 overflow-hidden transition-opacity duration-200 ease-in-out">
+      <div className="h-full overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  );
+});
+
 // Dashboard Content component that uses the context
 const DashboardContent = ({ 
   detailsId, 
@@ -954,6 +965,7 @@ const DashboardContent = ({
     lastFetch,
     actionLoadingId,
     tab,
+    setTab,
     autoRefreshEnabled,
     refreshInterval,
     realtimeStatus,
@@ -1073,7 +1085,7 @@ const DashboardContent = ({
     switch (tab) {
       case 'dashboard':
         return (
-          <TabContent tabKey="dashboard">
+          <TabContent>
             <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
               <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 {loading ? (
@@ -1118,7 +1130,7 @@ const DashboardContent = ({
 
       case 'requests':
         return (
-          <TabContent tabKey="requests">
+          <TabContent>
             <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
               {/* Header Section */}
               <div className="mb-8">
@@ -1326,7 +1338,7 @@ const DashboardContent = ({
 
       case 'fleet':
         return (
-          <TabContent tabKey="fleet">
+          <TabContent>
             <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
               <div className="space-y-4">
                 {loading ? (
@@ -1368,7 +1380,7 @@ const DashboardContent = ({
 
       case 'settings':
         return (
-          <TabContent tabKey="settings">
+          <TabContent>
             <div className="max-w-xl mx-auto px-4 md:px-6 pb-12">
               <div className="bg-card p-6 md:p-8 rounded-xl border border-border">
                 <h2 className="text-lg md:text-xl font-bold mb-4 text-primary">Settings</h2>
@@ -1393,7 +1405,7 @@ const DashboardContent = ({
 
   return (
     <SidebarProvider>
-      <AppSidebar variant="inset" activeTab={tab} />
+      <AppSidebar variant="inset" activeTab={tab} onTabChange={setTab} />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">
@@ -1423,19 +1435,9 @@ const DashboardContent = ({
   )
 }
 
-// TabContent component
-const TabContent = React.memo(({ children, tabKey }: { children: React.ReactNode; tabKey: string }) => (
-  <div className="flex-1 overflow-hidden transition-opacity duration-200 ease-in-out">
-    <div className="h-full overflow-y-auto">
-      {children}
-    </div>
-  </div>
-))
-
 // After each React.memo definition:
 DashboardCard.displayName = 'DashboardCard';
 FleetCard.displayName = 'FleetCard';
-TabContent.displayName = 'TabContent';
 
 export default function Page() {
   const [detailsId, setDetailsId] = useState<string | null>(null)
@@ -1447,7 +1449,7 @@ export default function Page() {
   const [auditLogLoaded, setAuditLogLoaded] = useState(false);
 
   const router = useRouter()
-  const { user, loading: authLoading, isAdmin, isAuthenticated } = useAuth()
+  const { loading: authLoading, isAdmin, isAuthenticated } = useAuth()
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
