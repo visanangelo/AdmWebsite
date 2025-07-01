@@ -3,7 +3,7 @@
  * Each action can have a label, icon, click handler, and optional color/disabled state.
  */
 import React from 'react';
-import { Button } from './ui/button';
+import { Button } from '@/features/shared/components/ui/button';
 
 /**
  * Represents a single action button's configuration.
