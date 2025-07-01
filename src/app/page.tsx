@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { getSupabaseClient } from "@/lib/supabaseClient"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type React from "react"
 
@@ -35,7 +34,6 @@ import {
   Instagram,
   Linkedin,
   Globe,
-  Check,
 } from "lucide-react"
 import Link from "next/link"
 import { AnimatedStat } from "@/features/shared/components/ui/animated-stat"
@@ -43,7 +41,6 @@ import { Navbar } from "@/features/shared/components/ui/navbar"
 import { useLanguage } from '@/contexts/language-context'
 import BlurText from "@/features/shared/components/ui/blur-text"
 import { translations } from "@/config/languages"
-import { motion } from "framer-motion"
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
@@ -56,24 +53,6 @@ export default function HomePage() {
     email: "",
     message: "",
   });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // Simulate form submission
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setFormData({ name: "", email: "", message: "" });
-    } catch (error) {
-      console.error("Form submission error:", error);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-white">

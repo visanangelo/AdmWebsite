@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion } from "framer-motion"
 import { Trash2Icon } from "lucide-react"
-import { FleetItem } from '@/features/shared'
+import type { FleetItem } from '@/features/shared'
 
 // Enhanced Fleet Card with better visual design (from original)
 const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
@@ -90,7 +90,7 @@ const FleetCardSkeleton = () => (
 
 interface FleetTabProps {
   loading: boolean
-  fleet: any[]
+  fleet: FleetItem[]
   onFleetDelete: (id: string) => Promise<void>
   onFleetStatusUpdate: (fleetId: string, newStatus: string) => Promise<void>
 }

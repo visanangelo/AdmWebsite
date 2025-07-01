@@ -14,13 +14,13 @@ interface RequestsTabProps {
   error: string | null
   lastFetch: Date
   actionLoadingId: string | null
-  deleteDialog: { open: boolean; id: string | null; row: any | null }
+  deleteDialog: { open: boolean; id: string | null; row: RentalRow | null }
   detailsId: string | null
   onRefresh: () => void
   onApprove: (id: string) => Promise<void>
   onDecline: (id: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
-  onEdit: (id: string, updatedFields: any) => Promise<void>
+  onEdit: (id: string, updatedFields: Record<string, unknown>) => Promise<void>
   onComplete: (id: string) => Promise<void>
   onReopen: (id: string) => Promise<void>
   onCancel: (id: string) => Promise<void>
@@ -152,7 +152,7 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
                     {deleteDialog.row.status || 'Unknown'}
                   </Badge>
                 </div>
-                <div><span className="font-medium">Equipment:</span> {typeof deleteDialog.row.equipment === 'string' ? deleteDialog.row.equipment : deleteDialog.row.equipment?.name || 'Unknown'}</div>
+                <div><span className="font-medium">Equipment:</span> {typeof deleteDialog.row.equipment === 'string' ? deleteDialog.row.equipment : (deleteDialog.row.equipment && typeof deleteDialog.row.equipment === 'object' && 'name' in deleteDialog.row.equipment ? (deleteDialog.row.equipment as { name: string }).name : 'Unknown')}</div>
                 <div><span className="font-medium">Requester:</span> {deleteDialog.row.requester}</div>
                 <div className="md:col-span-2">
                   <span className="font-medium">Date:</span> {deleteDialog.row.date ? new Date(deleteDialog.row.date).toLocaleDateString() : 'N/A'}

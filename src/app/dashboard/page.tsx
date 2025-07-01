@@ -948,7 +948,7 @@ const DashboardContent = ({
 }) => {
   const notify = useNotify();
   const {
-    data: { requests, fleet, stats },
+    data: { requests, fleet },
     loading,
     error,
     lastFetch,
@@ -960,9 +960,6 @@ const DashboardContent = ({
     fetchData,
     debouncedFetch,
     setActionLoadingId,
-    setTab,
-    setAutoRefreshEnabled,
-    setRefreshInterval,
     handleApprove,
     handleDecline,
     handleComplete,
@@ -1070,105 +1067,6 @@ const DashboardContent = ({
 
   // Helper function to convert actionLoadingId type
   const getActionLoadingId = (): string | null | undefined => actionLoadingId || undefined
-
-  const tabOptions = [
-    { key: "home", label: "Home" },
-    { key: "dashboard", label: "Dashboard" },
-    { key: "requests", label: "Requests" },
-    { key: "fleet", label: "Fleet" },
-    { key: "settings", label: "Settings" },
-  ]
-
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const urlTab = searchParams.get("tab") || "dashboard";
-
-  // Only update tab state if needed
-  useEffect(() => {
-    if (tab !== urlTab) setTab(urlTab);
-  }, [urlTab, tab]);
-
-  // Handle browser back/forward buttons for tab navigation
-  useEffect(() => {
-    const handlePopState = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const newTab = urlParams.get('tab') || 'dashboard';
-      if (tab !== newTab) {
-        setTab(newTab);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [tab]);
-
-  const handleTabChange = useCallback((value: string) => {
-    if (tab === value) return; // Prevent unnecessary updates
-    
-    if (value === 'home') {
-      // Navigate to home page
-      window.location.href = '/'
-      return
-    }
-    
-    setTab(value);
-    // Use pushState instead of router.replace for instant navigation
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', value);
-    window.history.pushState({}, '', url.toString());
-  }, [tab]);
-
-  // Keyboard navigation for tabs
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Only handle keyboard navigation when not in an input field
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      const tabOrder = ['home', 'dashboard', 'requests', 'fleet', 'settings'];
-      const currentIndex = tabOrder.indexOf(tab);
-      
-      switch (event.key) {
-        case 'ArrowRight':
-        case 'ArrowDown':
-          event.preventDefault();
-          const nextIndex = (currentIndex + 1) % tabOrder.length;
-          handleTabChange(tabOrder[nextIndex]);
-          break;
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          event.preventDefault();
-          const prevIndex = currentIndex === 0 ? tabOrder.length - 1 : currentIndex - 1;
-          handleTabChange(tabOrder[prevIndex]);
-          break;
-        case 'h':
-        case 'H':
-          event.preventDefault();
-          handleTabChange('home');
-          break;
-        case '1':
-          event.preventDefault();
-          handleTabChange('dashboard');
-          break;
-        case '2':
-          event.preventDefault();
-          handleTabChange('requests');
-          break;
-        case '3':
-          event.preventDefault();
-          handleTabChange('fleet');
-          break;
-        case '4':
-          event.preventDefault();
-          handleTabChange('settings');
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tab, handleTabChange]);
 
   // Memoize tab content to prevent unnecessary re-renders
   const tabContent = useMemo(() => {
@@ -1495,7 +1393,7 @@ const DashboardContent = ({
 
   return (
     <SidebarProvider>
-      <AppSidebar variant="inset" activeTab={tab} onTabChange={handleTabChange} />
+      <AppSidebar variant="inset" activeTab={tab} />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">

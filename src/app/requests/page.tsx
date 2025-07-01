@@ -8,13 +8,14 @@ import { Textarea } from "@/features/shared/components/ui/textarea";
 import { Button } from "@/features/shared/components/ui/button";
 import { useNotify } from '@/hooks/useNotify';
 import { Calendar, MapPin, Wrench, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import type { FleetItem } from '@/types/rental';
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
 
 export default function RequestsPage() {
   const [equipment, setEquipment] = useState("");
-  const [fleet, setFleet] = useState<any[]>([]);
+  const [fleet, setFleet] = useState<FleetItem[]>([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [location, setLocation] = useState("");
@@ -36,7 +37,22 @@ export default function RequestsPage() {
         notify.error('Failed to load equipment list');
       } else {
         console.log('Fleet loaded:', data);
-        setFleet(data || []);
+        setFleet(
+          (Array.isArray(data) ? data : [])
+            .filter(
+              (item) =>
+                typeof item === 'object' &&
+                item !== null &&
+                'id' in item &&
+                'name' in item &&
+                'status' in item
+            )
+            .map((item) => ({
+              id: String((item as Record<string, unknown>).id),
+              name: String((item as Record<string, unknown>).name),
+              status: String((item as Record<string, unknown>).status) as FleetItem['status'],
+            }))
+        );
       }
       setFleetLoading(false);
     });
@@ -309,7 +325,7 @@ export default function RequestsPage() {
                   <p className="font-medium text-gray-800 mb-1">What happens next?</p>
                   <ul className="space-y-1">
                     <li>• Your request will be reviewed by an administrator</li>
-                    <li>• You'll receive a notification once it's approved or declined</li>
+                    <li>• You&apos;ll receive a notification once it&apos;s approved or declined</li>
                     <li>• Approved requests will automatically reserve the equipment</li>
                   </ul>
                 </div>

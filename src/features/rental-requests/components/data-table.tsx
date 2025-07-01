@@ -50,21 +50,6 @@ import { Input } from '@/features/shared/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/shared/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/features/shared/components/ui/table';
 import { Label } from '@/features/shared/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/features/shared/components/ui/dialog"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/features/shared/components/ui/tooltip"
 import { Skeleton } from "@/features/shared/components/ui/skeleton"
 import { ActionButtons } from './ActionButtons'
 import { useIsMobile } from '@/features/shared'
@@ -110,19 +95,6 @@ interface DataTableProps {
   onFilterByUser?: (userId: string) => Promise<void>
   onFilterByEquipment?: (equipmentId: string) => Promise<void>
   onClearIndexedFilters?: () => Promise<void>
-}
-
-// Loading skeleton for table rows
-function TableRowSkeleton({ columns }: { columns: number }) {
-  return (
-    <TableRow>
-      {Array.from({ length: columns }).map((_, index) => (
-        <TableCell key={index}>
-          <Skeleton className="h-4 w-full" />
-        </TableCell>
-      ))}
-    </TableRow>
-  )
 }
 
 // Bulk Actions Component
@@ -394,7 +366,6 @@ function DataTableToolbar({
   onFilterByEquipment?: (equipmentId: string) => Promise<void>
   onClearIndexedFilters?: () => Promise<void>
 }) {
-  const isMobile = useIsMobile()
   const [showFilters, setShowFilters] = useState(false)
 
   return (
@@ -415,17 +386,15 @@ function DataTableToolbar({
           </div>
           
           {/* Mobile Filter Toggle */}
-          {isMobile && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className="h-10 md:h-9"
-            >
-              <FilterIcon className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="h-10 md:h-9"
+          >
+            <FilterIcon className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
         </div>
         
         {/* Actions */}
@@ -484,77 +453,73 @@ function DataTableToolbar({
       </div>
       
       {/* Mobile Filters Panel */}
-      {isMobile && showFilters && (
-        <div className="bg-muted/50 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium">From Date</Label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs font-medium">To Date</Label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
-          </div>
-          
-          {onClearIndexedFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClearIndexedFilters}
-              className="w-full h-9"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Clear Filters
-            </Button>
-          )}
-        </div>
-      )}
-      
-      {/* Desktop Filters */}
-      {!isMobile && (
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium">From:</Label>
+      <div className="bg-muted/50 rounded-lg p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs font-medium">From Date</Label>
             <Input
               type="date"
               value={dateFrom}
               onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
-              className="h-9 w-40"
+              className="h-9 text-sm"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium">To:</Label>
+          <div>
+            <Label className="text-xs font-medium">To Date</Label>
             <Input
               type="date"
               value={dateTo}
               onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
-              className="h-9 w-40"
+              className="h-9 text-sm"
             />
           </div>
-          {onClearIndexedFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClearIndexedFilters}
-              className="h-9"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Clear Filters
-            </Button>
-          )}
         </div>
-      )}
+        
+        {onClearIndexedFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearIndexedFilters}
+            className="w-full h-9"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear Filters
+          </Button>
+        )}
+      </div>
+      
+      {/* Desktop Filters */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm font-medium">From:</Label>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
+            className="h-9 w-40"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-sm font-medium">To:</Label>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
+            className="h-9 w-40"
+          />
+        </div>
+        {onClearIndexedFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearIndexedFilters}
+            className="h-9"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear Filters
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
@@ -596,7 +561,6 @@ function SortableHeader({ column, children }: { column: Column<RentalRow, unknow
 // Pagination Component
 function DataTablePagination({ table, pagination, setPagination }: { table: ReturnType<typeof useReactTable<RentalRow>>, pagination: { pageIndex: number, pageSize: number }, setPagination: (p: { pageIndex: number, pageSize: number }) => void }) {
   const [open, setOpen] = React.useState(false);
-  const isMobile = useIsMobile();
   
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-2 py-4">
