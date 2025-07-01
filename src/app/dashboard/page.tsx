@@ -21,6 +21,23 @@ import { Badge } from "@/features/shared/components/ui/badge"
 import { RentalRequest, FleetItem } from '@/types/rental'
 import { useAuth } from '@/hooks/use-auth'
 import type { FleetStatus } from '@/types/rental'
+import type { User } from '@supabase/supabase-js'
+
+// Add missing types
+export interface DashboardStats {
+  activeRentals: number;
+  fleetAvailable: number;
+  fleetInUse: number;
+  pendingRequests: number;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  user_id: string;
+  details: Record<string, unknown>;
+  created_at: string;
+}
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
@@ -256,8 +273,8 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
   const notify = useNotify();
   const [data, setData] = useState<{
     requests: RentalRequest[]
-    fleet: any[]
-    stats: any
+    fleet: FleetItem[]
+    stats: DashboardStats | null
   }>({ requests: [], fleet: [], stats: null })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -323,13 +340,21 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
             
             switch (payload.eventType) {
               case 'INSERT':
-                newFleet.unshift(payload.new)
-                break
+                if (payload.new && payload.new.id && payload.new.name && payload.new.status) {
+                  newFleet.unshift({
+                    id: payload.new.id,
+                    name: payload.new.name,
+                    status: payload.new.status
+                  });
+                }
+                break;
               case 'UPDATE':
-                newFleet = newFleet.map(item => 
-                  item.id === payload.new.id ? { ...item, ...payload.new } : item
-                )
-                break
+                newFleet = newFleet.map(item =>
+                  item.id === payload.new.id && payload.new.name && payload.new.status
+                    ? { id: payload.new.id, name: payload.new.name, status: payload.new.status }
+                    : item
+                );
+                break;
               case 'DELETE':
                 newFleet = newFleet.filter(item => item.id !== payload.old.id)
                 break
@@ -462,8 +487,8 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
 interface DashboardContextType {
   data: {
     requests: RentalRequest[]
-    fleet: any[]
-    stats: any
+    fleet: FleetItem[]
+    stats: DashboardStats | null
   }
   loading: boolean
   error: string | null
@@ -489,7 +514,7 @@ interface DashboardContextType {
   handleBulkDelete: (ids: string[]) => Promise<void>
   handleFleetDelete: (id: string) => Promise<void>
   handleFleetStatusUpdate: (fleetId: string, newStatus: FleetStatus) => Promise<void>
-  handleEdit: (id: string, updatedFields: any) => Promise<void>
+  handleEdit: (id: string, updatedFields: Partial<RentalRequest>) => Promise<void>
   handleDirectDeleteConfirm?: () => Promise<void>
   handleDirectDeleteCancel?: () => void
 }
@@ -800,7 +825,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [logAudit, debouncedFetch])
 
-  const handleEdit = useCallback(async (id: string, updatedFields: any) => {
+  const handleEdit = useCallback(async (id: string, updatedFields: Partial<RentalRequest>) => {
     setActionLoadingId(id)
     try {
       const { error } = await getSupabaseClient().from('rental_requests').update(updatedFields).eq('id', id)
@@ -913,16 +938,16 @@ const DashboardContent = ({
   auditLogLoaded, 
   fetchAuditLog 
 }: {
-  user: any
+  user: User | null
   auditOpen: boolean
   setAuditOpen: (open: boolean) => void
-  auditLog: any[]
+  auditLog: AuditLogEntry[]
   expandedLog: string | null
   setExpandedLog: (id: string | null) => void
   detailsId: string | null
   setDetailsId: (id: string | null) => void
-  deleteDialog: { open: boolean; id: string | null; row: any | null }
-  setDeleteDialog: (dialog: { open: boolean; id: string | null; row: any | null }) => void
+  deleteDialog: { open: boolean; id: string | null; row: RentalRequest | null }
+  setDeleteDialog: (dialog: { open: boolean; id: string | null; row: RentalRequest | null }) => void
   auditLogLoaded: boolean
   fetchAuditLog: () => void
 }) => {
@@ -987,8 +1012,8 @@ const DashboardContent = ({
   const emptyFleet = fleet.length === 0
 
   const handleDeleteWrapper = async (id: string) => {
-    const row = requests.find(r => r.id === id)
-    setDeleteDialog({ open: true, id, row })
+    const row = requests.find(r => r.id === id) ?? null;
+    setDeleteDialog({ open: true, id, row });
   }
 
   const handleViewDetails = useCallback(async (id: string) => {
@@ -1300,10 +1325,10 @@ const DashboardContent = ({
                         <div><span className="font-medium">Status:</span> 
                           <Badge variant="outline" className="ml-1">{deleteDialog.row.status}</Badge>
                         </div>
-                        <div><span className="font-medium">Equipment:</span> {deleteDialog.row.equipment}</div>
-                        <div><span className="font-medium">Requester:</span> {deleteDialog.row.requester}</div>
+                        <div><span className="font-medium">Equipment:</span> {typeof deleteDialog.row.equipment === 'string' ? deleteDialog.row.equipment : deleteDialog.row.equipment?.name || '-'}</div>
+                        <div><span className="font-medium">Requester:</span> {deleteDialog.row.requester || '-'}</div>
                         <div className="md:col-span-2">
-                          <span className="font-medium">Date:</span> {new Date(deleteDialog.row.date).toLocaleDateString()}
+                          <span className="font-medium">Date:</span> {deleteDialog.row.date ? new Date(deleteDialog.row.date).toLocaleDateString() : deleteDialog.row.created_at ? new Date(deleteDialog.row.created_at).toLocaleDateString() : '-'}
                         </div>
                       </div>
                     </div>
@@ -1340,7 +1365,7 @@ const DashboardContent = ({
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">Equipment:</span>
-                              <span className="text-sm">{typeof r.equipment === 'string' ? r.equipment : r.equipment?.name || "-"}</span>
+                              <span className="text-sm">{typeof r.equipment === 'string' ? r.equipment : r.equipment?.name || '-'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">User:</span>
@@ -1504,12 +1529,17 @@ const TabContent = React.memo(({ children, tabKey }: { children: React.ReactNode
   </div>
 ))
 
+// After each React.memo definition:
+DashboardCard.displayName = 'DashboardCard';
+FleetCard.displayName = 'FleetCard';
+TabContent.displayName = 'TabContent';
+
 export default function Page() {
   const [auditOpen, setAuditOpen] = useState(false)
-  const [auditLog, setAuditLog] = useState<any[]>([])
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
   const [expandedLog, setExpandedLog] = useState<string | null>(null)
   const [detailsId, setDetailsId] = useState<string | null>(null)
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null; row: any | null }>({
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null; row: RentalRequest | null }>({
     open: false,
     id: null,
     row: null,
@@ -1542,8 +1572,14 @@ export default function Page() {
         .limit(50)
       
       if (!error) {
-        setAuditLog(data || [])
-        setAuditLogLoaded(true)
+        setAuditLog((data || []).map((entry: any) => ({
+          id: entry.id,
+          action: entry.action,
+          user_id: entry.user_id,
+          details: entry.details,
+          created_at: entry.created_at
+        })));
+        setAuditLogLoaded(true);
       }
     } catch (error) {
       console.error('Failed to load audit log:', error)

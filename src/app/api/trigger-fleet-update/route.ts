@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
