@@ -10,7 +10,7 @@ import {
   HomeIcon,
   BellIcon,
 } from "lucide-react"
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/features/shared/components/ui/sidebar"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/features/shared/components/ui/sidebar"
 import { Avatar, AvatarFallback } from "@/features/shared/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/features/shared/components/ui/dropdown-menu"
 import { Badge } from "@/features/shared/components/ui/badge"

@@ -40,7 +40,7 @@ export default function RequestsPage() {
       }
       setFleetLoading(false);
     });
-  }, []);
+  }, [notify]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

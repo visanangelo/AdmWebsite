@@ -15,14 +15,12 @@ import {
   Mail,
   Hammer,
   Building,
-  Shield,
   Clock,
   MapPin,
   CheckCircle,
   Star,
   Users,
   Award,
-  Wrench,
   Home,
   Building2,
   PaintBucket,
@@ -33,15 +31,11 @@ import {
   FileCheck,
   Target,
   Briefcase,
-  GraduationCap,
-  Medal,
-  Eye,
   Facebook,
   Instagram,
   Linkedin,
   Globe,
   Check,
-  Send,
 } from "lucide-react"
 import Link from "next/link"
 import { AnimatedStat } from "@/features/shared/components/ui/animated-stat"
@@ -62,156 +56,6 @@ export default function HomePage() {
     email: "",
     message: "",
   });
-
-  const services = [
-    {
-      title: "Residential Construction",
-      description: "Custom homes and residential renovations built to the highest standards with attention to detail.",
-      icon: Home,
-      accent: "border-l-yellow-500",
-    },
-    {
-      title: "Commercial Projects",
-      description:
-        "Office buildings, retail spaces, and commercial facilities designed for functionality and durability.",
-      icon: Building2,
-      accent: "border-l-slate-500",
-    },
-    {
-      title: "Renovations & Remodeling",
-      description: "Transform your existing space with our comprehensive renovation and remodeling services.",
-      icon: PaintBucket,
-      accent: "border-l-stone-500",
-    },
-    {
-      title: "Project Management",
-      description: "End-to-end project coordination ensuring timely delivery and quality craftsmanship.",
-      icon: Clipboard,
-      accent: "border-l-gray-500",
-    },
-    {
-      title: "Maintenance Services",
-      description: "Ongoing maintenance and repair services to keep your property in excellent condition.",
-      icon: Settings,
-      accent: "border-l-yellow-600",
-    },
-    {
-      title: "Safety & Consultation",
-      description: "Expert consultation and detailed planning to bring your construction vision to life safely.",
-      icon: HardHat,
-      accent: "border-l-slate-600",
-    },
-  ]
-
-  const stats = [
-    { icon: Clock, number: 10, label: "Years Experience", suffix: "+" },
-    { icon: Building, number: 200, label: "Projects Completed", suffix: "+" },
-    { icon: Users, number: 150, label: "Happy Clients", suffix: "+" },
-    { icon: Award, number: 25, label: "Awards Won", suffix: "+" },
-  ]
-
-  const process = [
-    {
-      step: "01",
-      title: "Initial Consultation",
-      description: "We meet with you to understand your vision, requirements, and budget constraints.",
-      icon: Briefcase,
-    },
-    {
-      step: "02",
-      title: "Design & Planning",
-      description: "Our team creates detailed plans and designs tailored to your specific needs.",
-      icon: FileCheck,
-    },
-    {
-      step: "03",
-      title: "Project Execution",
-      description: "We execute the project with precision, maintaining quality and timeline standards.",
-      icon: Hammer,
-    },
-    {
-      step: "04",
-      title: "Final Delivery",
-      description: "We deliver your completed project and provide ongoing support and maintenance.",
-      icon: CheckCircle,
-    },
-  ]
-
-  const testimonials = [
-    {
-      quote:
-        "ADM Instal transformed our office space beyond our expectations. Their attention to detail and professionalism throughout the project was exceptional.",
-      author: "Sarah Mitchell",
-      position: "CEO",
-      company: "TechCorp Solutions",
-      rating: 5,
-    },
-    {
-      quote:
-        "The team at ADM Instal delivered our residential project on time and within budget. The quality of workmanship is outstanding.",
-      author: "Michael Chen",
-      position: "Property Developer",
-      company: "Chen Development Group",
-      rating: 5,
-    },
-    {
-      quote:
-        "Professional, reliable, and skilled. ADM Instal has been our go-to construction partner for multiple commercial projects.",
-      author: "Jennifer Rodriguez",
-      position: "Operations Director",
-      company: "Metro Properties",
-      rating: 5,
-    },
-  ]
-
-  const certifications = [
-    { name: "Licensed General Contractor", code: "GC-2024-001" },
-    { name: "OSHA Safety Certified", code: "OSHA-30-2024" },
-    { name: "Green Building Council Member", code: "USGBC-2024" },
-    { name: "Better Business Bureau A+", code: "BBB-A+-2024" },
-  ]
-
-  const team = [
-    {
-      name: "David Martinez",
-      position: "Founder & CEO",
-      credentials: "Licensed General Contractor, 15+ Years Experience",
-      expertise: "Commercial Construction, Project Management",
-    },
-    {
-      name: "Lisa Thompson",
-      position: "Chief Operations Officer",
-      credentials: "Construction Management Degree, PMP Certified",
-      expertise: "Operations, Quality Control, Client Relations",
-    },
-    {
-      name: "Robert Kim",
-      position: "Lead Project Manager",
-      credentials: "Civil Engineering Degree, LEED Certified",
-      expertise: "Residential Projects, Sustainable Building",
-    },
-  ]
-
-  const projects = [
-    {
-      title: "Downtown Office Complex",
-      category: "Commercial",
-      description: "50,000 sq ft modern office building with sustainable design features.",
-      specs: ["LEED Gold Certified", "6-Month Timeline", "$2.5M Project Value"],
-    },
-    {
-      title: "Luxury Residential Estate",
-      category: "Residential",
-      description: "Custom 8,000 sq ft home with premium finishes and smart home integration.",
-      specs: ["Smart Home Technology", "Premium Materials", "Award-Winning Design"],
-    },
-    {
-      title: "Retail Shopping Center",
-      category: "Commercial",
-      description: "Mixed-use development with retail spaces and parking facilities.",
-      specs: ["Multi-Phase Construction", "On-Time Delivery", "Tenant Ready"],
-    },
-  ]
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -341,7 +185,7 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto">
             <div className="text-center space-y-8 mb-20">
               <div className="inline-flex items-center space-x-3 bg-white border border-gray-200 text-gray-700 px-6 py-3 rounded-full text-sm font-semibold tracking-wide">
-                <Eye className="h-4 w-4 text-yellow-600" />
+                <Target className="h-4 w-4 text-yellow-600" />
                 <span>{t.projects.subtitle}</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight">{t.projects.title}</h2>
