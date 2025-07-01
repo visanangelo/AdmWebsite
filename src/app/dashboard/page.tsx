@@ -1458,11 +1458,11 @@ const DashboardContent = ({
     }
   }, [
     tab, loading, requests, fleet, emptyFleet, 
-    refreshInterval, autoRefreshEnabled, deleteDialog, detailsId,
+    deleteDialog, detailsId,
     dashboardStats, realtimeStatus,
     handleApprove, handleDecline, handleEdit, handleComplete,
     handleReopen, handleCancel, handleViewDetails, handleBulkApprove, handleBulkDecline,
-    handleBulkDelete, handleFleetDelete, debouncedFetch, fetchAuditLog,
+    handleBulkDelete, handleFleetDelete, debouncedFetch,
     setDetailsId, notify, setActionLoadingId, getActionLoadingId, handleDeleteWrapper, 
     handleDirectDeleteCancel, handleDirectDeleteConfirm, handleFleetStatusUpdate, lastFetch
   ])
