@@ -520,6 +520,11 @@ interface DashboardContextType {
   setTab: (tab: string) => void
   setAutoRefreshEnabled: (enabled: boolean) => void
   setRefreshInterval: (interval: number) => void
+  setData: React.Dispatch<React.SetStateAction<{
+    requests: RentalRequest[];
+    fleet: FleetItem[];
+    stats: DashboardStats | null;
+  }>>
   handleApprove: (id: string) => Promise<void>
   handleDecline: (id: string) => Promise<void>
   handleComplete: (id: string) => Promise<void>
@@ -578,8 +583,6 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     ])
   }, [])
 
-
-
   const handleApprove = useCallback(async (id: string) => {
     setActionLoadingId(id)
     let prevState: typeof data | null = null;
@@ -625,7 +628,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId, setData])
 
   const handleDecline = useCallback(async (id: string) => {
     setActionLoadingId(id)
@@ -672,7 +675,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId, setData])
 
   const handleComplete = useCallback(async (id: string) => {
     setActionLoadingId(id)
@@ -719,7 +722,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId, setData])
 
   const handleReopen = useCallback(async (id: string) => {
     setActionLoadingId(id)
@@ -814,8 +817,6 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       setActionLoadingId(null)
     }
   }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
-
-
 
   const handleBulkApprove = useCallback(async (ids: string[]) => {
     if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
@@ -973,6 +974,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     setTab,
     setAutoRefreshEnabled,
     setRefreshInterval,
+    setData,
     // Action handlers
     handleApprove,
     handleDecline,
@@ -1034,6 +1036,7 @@ const DashboardContent = ({
     realtimeStatus,
     debouncedFetch,
     setActionLoadingId,
+    setData,
     handleApprove,
     handleDecline,
     handleComplete,
