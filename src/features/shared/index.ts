@@ -8,7 +8,7 @@ export { useNotify } from './hooks/useNotify'
 export { useIsMobile } from './hooks/use-mobile'
 
 // Shared utilities
-export { getSupabaseClient, getAuthenticatedSupabaseClient } from './lib/supabaseClient'
+export { getSupabaseClient } from './lib/supabaseClient'
 export { cn } from './lib/utils'
 export { validateRequiredFields, validateDateRange } from './lib/validation'
 
