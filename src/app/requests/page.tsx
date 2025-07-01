@@ -6,7 +6,7 @@ import { RentalRequestService } from "@/services/rental-requests";
 import { Input } from "@/features/shared/components/ui/input";
 import { Textarea } from "@/features/shared/components/ui/textarea";
 import { Button } from "@/features/shared/components/ui/button";
-import { useNotify } from '@/hooks/useNotify';
+import { useNotify } from '@/features/shared/hooks/useNotify';
 import { Calendar, MapPin, Wrench, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import type { FleetItem } from '@/types/rental';
 
