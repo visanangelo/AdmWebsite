@@ -332,8 +332,6 @@ function DataTableToolbar({
   onExport,
   data,
   enableColumnVisibility,
-  columnFilters,
-  setColumnFilters,
   dateFrom,
   setDateFrom,
   dateTo,
@@ -347,8 +345,6 @@ function DataTableToolbar({
   onExport?: (data: RentalRow[]) => void
   data: RentalRow[]
   enableColumnVisibility: boolean
-  columnFilters: ColumnFiltersState
-  setColumnFilters: React.Dispatch<React.SetStateAction<ColumnFiltersState>>
   dateFrom: string
   setDateFrom: (date: string) => void
   dateTo: string
@@ -719,7 +715,6 @@ export function DataTable({
   onClearIndexedFilters,
 }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState("")
@@ -975,7 +970,6 @@ export function DataTable({
     columns,
     state: {
       sorting,
-      columnFilters,
       columnVisibility,
       rowSelection,
       globalFilter,
@@ -983,7 +977,6 @@ export function DataTable({
     },
     enableRowSelection: enableBulkActions,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
@@ -994,7 +987,7 @@ export function DataTable({
     getPaginationRowModel: getPaginationRowModel(),
     globalFilterFn: globalFuzzyFilterFn,
   }), [
-    data, columns, sorting, columnFilters, columnVisibility, rowSelection, 
+    data, columns, sorting, columnVisibility, rowSelection, 
     globalFilter, pagination, enableBulkActions
   ])
 
@@ -1020,8 +1013,6 @@ export function DataTable({
         onExport={onExport}
         data={data}
         enableColumnVisibility={enableColumnVisibility}
-        columnFilters={columnFilters}
-        setColumnFilters={setColumnFilters}
         dateFrom={dateFrom}
         setDateFrom={(value: string) => setDateFrom(value)}
         dateTo={dateTo}
