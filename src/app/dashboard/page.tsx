@@ -269,7 +269,24 @@ const FleetCardSkeleton = () => (
 )
 
 // Custom hook for data fetching with React Query patterns
-const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected' | 'connecting') => void) => {
+const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected' | 'connecting') => void): {
+  data: {
+    requests: RentalRequest[];
+    fleet: FleetItem[];
+    stats: DashboardStats | null;
+  };
+  loading: boolean;
+  error: string | null;
+  lastFetch: Date;
+  fetchData: (isManualRefresh?: boolean) => Promise<void>;
+  debouncedFetch: (isManualRefresh?: boolean) => void;
+  setData: React.Dispatch<React.SetStateAction<{
+    requests: RentalRequest[];
+    fleet: FleetItem[];
+    stats: DashboardStats | null;
+  }>>;
+  notify: ReturnType<typeof useNotify>;
+} => {
   const notify = useNotify();
   const [data, setData] = useState<{
     requests: RentalRequest[]
@@ -281,13 +298,13 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
   const [lastFetch, setLastFetch] = useState<Date>(new Date())
   const loadingRef = useRef(false)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const realtimeSubscriptionsRef = useRef<any[]>([])
+  const realtimeSubscriptionsRef = useRef<unknown[]>([])
   const initializedRef = useRef(false)
 
   // Setup realtime subscriptions
   const setupRealtimeSubscriptions = useCallback(() => {
     // Cleanup existing subscriptions
-    realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe())
+    realtimeSubscriptionsRef.current.forEach(sub => (sub as any).unsubscribe())
     realtimeSubscriptionsRef.current = []
 
     // Requests subscription
@@ -297,7 +314,7 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
         { event: '*', schema: 'public', table: 'rental_requests' },
         (payload) => {
           // Use setData directly to avoid dependency issues
-          setData(prev => {
+          setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
             const { requests } = prev
             let newRequests = [...requests]
             
@@ -334,7 +351,7 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
         { event: '*', schema: 'public', table: 'fleet' },
         (payload) => {
           // Use setData directly to avoid dependency issues
-          setData(prev => {
+          setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
             const { fleet } = prev
             let newFleet = [...fleet]
             
@@ -413,7 +430,7 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
       setLoading(false)
       loadingRef.current = false
     }
-  }, [])
+  }, [notify])
 
   const debouncedFetch = useCallback((isManualRefresh = false) => {
     if (fetchTimeoutRef.current) {
@@ -432,7 +449,7 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
         clearTimeout(fetchTimeoutRef.current)
       }
       // Cleanup realtime subscriptions
-      realtimeSubscriptionsRef.current.forEach(sub => sub.unsubscribe())
+      realtimeSubscriptionsRef.current.forEach(sub => (sub as any).unsubscribe())
     }
   }, [])
 
@@ -469,7 +486,7 @@ const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected
     }
     
     initializeData()
-  }, []) // Empty dependency array to prevent Fast Refresh reloads
+  }, [notify, setupRealtimeSubscriptions])
 
   return {
     data,
@@ -540,19 +557,6 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   // Use the data fetching hook
   const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData, notify } = useDataFetching(setRealtimeStatus)
 
-  // Service validation function
-  const validateService = useCallback((serviceName: string, methodName: string) => {
-    if (!RentalRequestService) {
-      console.error(`${serviceName} is not available`)
-      return false
-    }
-    if (typeof RentalRequestService[methodName as keyof typeof RentalRequestService] !== 'function') {
-      console.error(`${methodName} method is not available on ${serviceName}`)
-      return false
-    }
-    return true
-  }, [])
-
   // Action handlers - moved inside provider
   const findRequest = useCallback((id: string) => {
     return data.requests.find(r => r.id === id)
@@ -603,7 +607,11 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
         notify.error(error instanceof Error ? error.message : `Failed to ${actionType.toLowerCase()} request`)
         // Rollback optimistic update on error
         if (prevState) {
-          setData(prevState)
+          setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
+            return { ...prev, requests: prev.requests.map(r => 
+              r.id === id ? { ...r, status: 'Pending' } : r
+            ) }
+          })
         } else {
           setTimeout(() => {
             debouncedFetch(true)
@@ -625,7 +633,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       }, 
       'Request approved and equipment reserved!',
       (id: string) => {
-        setData(prev => {
+        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
           const req = prev.requests.find(r => r.id === id)
           return {
             ...prev,
@@ -652,7 +660,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       }, 
       'Request declined.',
       (id: string) => {
-        setData(prev => {
+        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
           const req = prev.requests.find(r => r.id === id)
           return {
             ...prev,
@@ -679,7 +687,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       }, 
       'Request marked as completed.',
       (id: string) => {
-        setData(prev => {
+        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
           const req = prev.requests.find(r => r.id === id)
           return {
             ...prev,
@@ -706,7 +714,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       }, 
       'Request reopened.',
       (id: string) => {
-        setData(prev => {
+        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
           const req = prev.requests.find(r => r.id === id)
           return {
             ...prev,
@@ -733,7 +741,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
       }, 
       'Request cancelled.',
       (id: string) => {
-        setData(prev => {
+        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
           const req = prev.requests.find(r => r.id === id)
           return {
             ...prev,
@@ -844,7 +852,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   const handleFleetStatusUpdate = async (fleetId: string, newStatus: FleetStatus) => {
     try {
       // Optimistic update
-      setData(prev => ({
+      setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => ({
         ...prev,
         fleet: prev.fleet.map(item => 
           item.id === fleetId ? { ...item, status: newStatus } : item
@@ -925,12 +933,6 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
 
 // Dashboard Content component that uses the context
 const DashboardContent = ({ 
-  user, 
-  auditOpen, 
-  setAuditOpen, 
-  auditLog, 
-  expandedLog, 
-  setExpandedLog, 
   detailsId, 
   setDetailsId, 
   deleteDialog, 
@@ -938,12 +940,6 @@ const DashboardContent = ({
   auditLogLoaded, 
   fetchAuditLog 
 }: {
-  user: User | null
-  auditOpen: boolean
-  setAuditOpen: (open: boolean) => void
-  auditLog: AuditLogEntry[]
-  expandedLog: string | null
-  setExpandedLog: (id: string | null) => void
   detailsId: string | null
   setDetailsId: (id: string | null) => void
   deleteDialog: { open: boolean; id: string | null; row: RentalRequest | null }
@@ -1067,7 +1063,7 @@ const DashboardContent = ({
     } finally {
       setActionLoadingId(null)
     }
-  }, [deleteDialog, debouncedFetch])
+  }, [deleteDialog, debouncedFetch, notify, setActionLoadingId, setDeleteDialog])
 
   const handleDirectDeleteCancel = useCallback(() => {
     setDeleteDialog({ open: false, id: null, row: null })
@@ -1283,7 +1279,17 @@ const DashboardContent = ({
                   <DataTableSkeleton />
                 ) : (
                   <DataTable
-                    data={requests as any}
+                    data={requests.map((r) => ({
+                      id: r.id,
+                      date: r.date ?? r.created_at ?? '',
+                      requester: r.requester ?? r.user_id ?? '',
+                      equipment: typeof r.equipment === 'string' ? r.equipment : r.equipment?.name ?? '',
+                      status: r.status,
+                      notes: r.notes,
+                      start_date: r.start_date,
+                      end_date: r.end_date,
+                      project_location: r.project_location,
+                    }))}
                     onApprove={handleApprove}
                     onDecline={handleDecline}
                     onDelete={handleDeleteWrapper}
@@ -1359,7 +1365,7 @@ const DashboardContent = ({
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
-                    {requests.filter(r => r.id === detailsId).map(r => (
+                    {requests.filter(r => r.id === detailsId).map((r: RentalRequest) => (
                       <div key={r.id} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -1485,7 +1491,7 @@ const DashboardContent = ({
     handleApprove, handleDecline, handleEdit, handleComplete,
     handleReopen, handleCancel, handleViewDetails, handleBulkApprove, handleBulkDecline,
     handleBulkDelete, handleFleetDelete, debouncedFetch, fetchAuditLog,
-    setAuditOpen, setRefreshInterval, setAutoRefreshEnabled, setDetailsId, TabContent
+    setDetailsId, TabContent
   ])
 
   return (
@@ -1535,9 +1541,6 @@ FleetCard.displayName = 'FleetCard';
 TabContent.displayName = 'TabContent';
 
 export default function Page() {
-  const [auditOpen, setAuditOpen] = useState(false)
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
-  const [expandedLog, setExpandedLog] = useState<string | null>(null)
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null; row: RentalRequest | null }>({
     open: false,
@@ -1572,13 +1575,6 @@ export default function Page() {
         .limit(50)
       
       if (!error) {
-        setAuditLog((data || []).map((entry: any) => ({
-          id: entry.id,
-          action: entry.action,
-          user_id: entry.user_id,
-          details: entry.details,
-          created_at: entry.created_at
-        })));
         setAuditLogLoaded(true);
       }
     } catch (error) {
@@ -1642,12 +1638,6 @@ export default function Page() {
   return (
     <DashboardProvider>
       <DashboardContent 
-        user={user}
-        auditOpen={auditOpen}
-        setAuditOpen={setAuditOpen}
-        auditLog={auditLog}
-        expandedLog={expandedLog}
-        setExpandedLog={setExpandedLog}
         detailsId={detailsId}
         setDetailsId={setDetailsId}
         deleteDialog={deleteDialog}
