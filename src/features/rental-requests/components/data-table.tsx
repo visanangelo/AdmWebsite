@@ -50,9 +50,7 @@ import { Input } from '@/features/shared/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/shared/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/features/shared/components/ui/table';
 import { Label } from '@/features/shared/components/ui/label';
-import { Skeleton } from "@/features/shared/components/ui/skeleton"
 import { ActionButtons } from './ActionButtons'
-import { useIsMobile } from '@/features/shared'
 
 // Rename local Row interface to RentalRow
 export interface RentalRow {
@@ -86,14 +84,11 @@ interface DataTableProps {
   onRefresh?: () => Promise<void>
   onExport?: (data: RentalRow[]) => void
   loading?: boolean
-  error?: string
   actionLoadingId?: string | null | undefined
   pageSize?: number
   enablePagination?: boolean
   enableColumnVisibility?: boolean
   enableBulkActions?: boolean
-  onFilterByUser?: (userId: string) => Promise<void>
-  onFilterByEquipment?: (equipmentId: string) => Promise<void>
   onClearIndexedFilters?: () => Promise<void>
 }
 
@@ -345,8 +340,6 @@ function DataTableToolbar({
   setDateTo,
   globalFilter,
   setGlobalFilter,
-  onFilterByUser,
-  onFilterByEquipment,
   onClearIndexedFilters,
 }: {
   table: ReturnType<typeof useReactTable<RentalRow>>
@@ -362,8 +355,6 @@ function DataTableToolbar({
   setDateTo: (date: string) => void
   globalFilter: string
   setGlobalFilter: (filter: string) => void
-  onFilterByUser?: (userId: string) => Promise<void>
-  onFilterByEquipment?: (equipmentId: string) => Promise<void>
   onClearIndexedFilters?: () => Promise<void>
 }) {
   const [showFilters, setShowFilters] = useState(false)
@@ -720,14 +711,11 @@ export function DataTable({
   onRefresh,
   onExport,
   loading,
-  error,
   actionLoadingId,
-  pageSize: propPageSize = 10,
+  pageSize = 10,
   enablePagination = true,
   enableColumnVisibility = true,
   enableBulkActions = true,
-  onFilterByUser,
-  onFilterByEquipment,
   onClearIndexedFilters,
 }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
@@ -1024,24 +1012,6 @@ export function DataTable({
     )
   }
 
-  // Enhanced error state
-  if (error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center space-y-4">
-          <div className="text-destructive text-lg font-semibold">Error Loading Data</div>
-          <p className="text-muted-foreground">{error}</p>
-          {onRefresh && (
-            <Button onClick={onRefresh} variant="outline" className="gap-2">
-              <RefreshCwIcon className="h-4 w-4" />
-              Try Again
-            </Button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
       <DataTableToolbar 
@@ -1058,8 +1028,6 @@ export function DataTable({
         setDateTo={(value: string) => setDateTo(value)}
         globalFilter={globalFilter}
         setGlobalFilter={(value: string) => setGlobalFilter(value)}
-        onFilterByUser={onFilterByUser}
-        onFilterByEquipment={onFilterByEquipment}
         onClearIndexedFilters={onClearIndexedFilters}
       />
       
