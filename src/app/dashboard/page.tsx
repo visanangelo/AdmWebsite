@@ -578,243 +578,307 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     ])
   }, [])
 
-  const createActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, successMessage: string, optimisticUpdate?: (id: string) => void) => {
-    return async (id: string) => {
-      setActionLoadingId(id)
-      let prevState: typeof data | null = null;
-      try {
-        const req = findRequest(id)
-        // Save previous state for rollback
-        if (optimisticUpdate) {
-          prevState = data;
-          optimisticUpdate(id)
-        }
-        // Validate service method exists
-        if (!serviceMethod || typeof serviceMethod !== 'function') {
-          throw new Error(`Service method for ${actionType} is not available`)
-        }
-        await serviceMethod(id)
-        notify.success(successMessage)
-        await logAudit(`${actionType} rental request`, {
-          request_id: id,
-          equipment_id: req?.equipment_id,
-          equipment_name: req?.equipment?.name,
-          request_user_id: req?.user_id
-        })
-      } catch (error) {
-        console.error(`Error in ${actionType} action:`, error)
-        notify.error(error instanceof Error ? error.message : `Failed to ${actionType.toLowerCase()} request`)
-        // Rollback optimistic update on error
-        if (prevState) {
-          setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
-            return { ...prev, requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Pending' } : r
-            ) }
-          })
-        } else {
-          setTimeout(() => {
-            debouncedFetch(true)
-          }, 100)
-        }
-      } finally {
-        setActionLoadingId(null)
-      }
-    }
-  }, [findRequest, logAudit, debouncedFetch, data])
 
-  const handleApprove = useCallback(
-    createActionHandler('Approved', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
-          throw new Error('RentalRequestService.approveRequest is not available')
+
+  const handleApprove = useCallback(async (id: string) => {
+    setActionLoadingId(id)
+    let prevState: typeof data | null = null;
+    try {
+      const req = findRequest(id)
+      // Save previous state for rollback
+      prevState = data;
+      setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
+        const req = prev.requests.find(r => r.id === id)
+        return {
+          ...prev,
+          requests: prev.requests.map(r => 
+            r.id === id ? { ...r, status: 'Approved' } : r
+          ),
+          fleet: req ? prev.fleet.map(f => 
+            f.id === req.equipment_id ? { ...f, status: 'Reserved' } : f
+          ) : prev.fleet
         }
-        return RentalRequestService.approveRequest(id)
-      }, 
-      'Request approved and equipment reserved!',
-      (id: string) => {
-        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Approved' } : r
-            ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'Reserved' } : f
-            ) : prev.fleet
-          }
-        })
+      })
+      
+      if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
+        throw new Error('RentalRequestService.approveRequest is not available')
       }
-    ),
-    [createActionHandler]
-  )
-
-  const handleDecline = useCallback(
-    createActionHandler('Declined', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.declineRequest !== 'function') {
-          throw new Error('RentalRequestService.declineRequest is not available')
-        }
-        return RentalRequestService.declineRequest(id)
-      }, 
-      'Request declined.',
-      (id: string) => {
-        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Declined' } : r
-            ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
-            ) : prev.fleet
-          }
-        })
-      }
-    ),
-    [createActionHandler]
-  )
-
-  const handleComplete = useCallback(
-    createActionHandler('Completed', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.completeRequest !== 'function') {
-          throw new Error('RentalRequestService.completeRequest is not available')
-        }
-        return RentalRequestService.completeRequest(id)
-      }, 
-      'Request marked as completed.',
-      (id: string) => {
-        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Completed' } : r
-            ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
-            ) : prev.fleet
-          }
-        })
-      }
-    ),
-    [createActionHandler]
-  )
-
-  const handleReopen = useCallback(
-    createActionHandler('Reopened', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.reopenRequest !== 'function') {
-          throw new Error('RentalRequestService.reopenRequest is not available')
-        }
-        return RentalRequestService.reopenRequest(id)
-      }, 
-      'Request reopened.',
-      (id: string) => {
-        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Pending' } : r
-            ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'In Use' } : f
-            ) : prev.fleet
-          }
-        })
-      }
-    ),
-    [createActionHandler]
-  )
-
-  const handleCancel = useCallback(
-    createActionHandler('Cancelled', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.cancelRequest !== 'function') {
-          throw new Error('RentalRequestService.cancelRequest is not available')
-        }
-        return RentalRequestService.cancelRequest(id)
-      }, 
-      'Request cancelled.',
-      (id: string) => {
-        setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
-          const req = prev.requests.find(r => r.id === id)
-          return {
-            ...prev,
-            requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Cancelled' } : r
-            ),
-            fleet: req ? prev.fleet.map(f => 
-              f.id === req.equipment_id ? { ...f, status: 'Available' } : f
-            ) : prev.fleet
-          }
-        })
-      }
-    ),
-    [createActionHandler]
-  )
-
-  const createBulkActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>) => {
-    return async (ids: string[]) => {
-      if (!serviceMethod || typeof serviceMethod !== 'function') {
-        notify.error(`Service method for ${actionType} is not available`)
-        return
-      }
-
-      notify.info(`${actionType} ${ids.length} requests...`)
-      try {
-        await Promise.all(ids.map(id => serviceMethod(id)))
-        notify.success(`${ids.length} requests ${actionType.toLowerCase()} successfully.`)
-        
-        // Use a small delay for smoother UX
+      await RentalRequestService.approveRequest(id)
+      notify.success('Request approved and equipment reserved!')
+      await logAudit('Approved rental request', {
+        request_id: id,
+        equipment_id: req?.equipment_id,
+        equipment_name: req?.equipment?.name,
+        request_user_id: req?.user_id
+      })
+    } catch (error) {
+      console.error('Error in Approve action:', error)
+      notify.error(error instanceof Error ? error.message : 'Failed to approve request')
+      // Rollback optimistic update on error
+      if (prevState) {
+        setData(prevState)
+      } else {
         setTimeout(() => {
-          debouncedFetch()
+          debouncedFetch(true)
         }, 100)
-      } catch (error) {
-        console.error(`Error in bulk ${actionType} action:`, error)
-        notify.error(`Failed to ${actionType.toLowerCase()} all requests. ${error instanceof Error ? error.message : ''}`)
       }
+    } finally {
+      setActionLoadingId(null)
     }
-  }, [debouncedFetch])
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
 
-  const handleBulkApprove = useCallback(
-    createBulkActionHandler('Approving', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
-          throw new Error('RentalRequestService.approveRequest is not available')
+  const handleDecline = useCallback(async (id: string) => {
+    setActionLoadingId(id)
+    let prevState: typeof data | null = null;
+    try {
+      const req = findRequest(id)
+      // Save previous state for rollback
+      prevState = data;
+      setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
+        const req = prev.requests.find(r => r.id === id)
+        return {
+          ...prev,
+          requests: prev.requests.map(r => 
+            r.id === id ? { ...r, status: 'Declined' } : r
+          ),
+          fleet: req ? prev.fleet.map(f => 
+            f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+          ) : prev.fleet
         }
-        return RentalRequestService.approveRequest(id)
+      })
+      
+      if (!RentalRequestService || typeof RentalRequestService.declineRequest !== 'function') {
+        throw new Error('RentalRequestService.declineRequest is not available')
       }
-    ),
-    [createBulkActionHandler]
-  )
+      await RentalRequestService.declineRequest(id)
+      notify.success('Request declined.')
+      await logAudit('Declined rental request', {
+        request_id: id,
+        equipment_id: req?.equipment_id,
+        equipment_name: req?.equipment?.name,
+        request_user_id: req?.user_id
+      })
+    } catch (error) {
+      console.error('Error in Decline action:', error)
+      notify.error(error instanceof Error ? error.message : 'Failed to decline request')
+      // Rollback optimistic update on error
+      if (prevState) {
+        setData(prevState)
+      } else {
+        setTimeout(() => {
+          debouncedFetch(true)
+        }, 100)
+      }
+    } finally {
+      setActionLoadingId(null)
+    }
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
 
-  const handleBulkDecline = useCallback(
-    createBulkActionHandler('Declining', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.declineRequest !== 'function') {
-          throw new Error('RentalRequestService.declineRequest is not available')
+  const handleComplete = useCallback(async (id: string) => {
+    setActionLoadingId(id)
+    let prevState: typeof data | null = null;
+    try {
+      const req = findRequest(id)
+      // Save previous state for rollback
+      prevState = data;
+      setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
+        const req = prev.requests.find(r => r.id === id)
+        return {
+          ...prev,
+          requests: prev.requests.map(r => 
+            r.id === id ? { ...r, status: 'Completed' } : r
+          ),
+          fleet: req ? prev.fleet.map(f => 
+            f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+          ) : prev.fleet
         }
-        return RentalRequestService.declineRequest(id)
+      })
+      
+      if (!RentalRequestService || typeof RentalRequestService.completeRequest !== 'function') {
+        throw new Error('RentalRequestService.completeRequest is not available')
       }
-    ),
-    [createBulkActionHandler]
-  )
+      await RentalRequestService.completeRequest(id)
+      notify.success('Request marked as completed.')
+      await logAudit('Completed rental request', {
+        request_id: id,
+        equipment_id: req?.equipment_id,
+        equipment_name: req?.equipment?.name,
+        request_user_id: req?.user_id
+      })
+    } catch (error) {
+      console.error('Error in Complete action:', error)
+      notify.error(error instanceof Error ? error.message : 'Failed to complete request')
+      // Rollback optimistic update on error
+      if (prevState) {
+        setData(prevState)
+      } else {
+        setTimeout(() => {
+          debouncedFetch(true)
+        }, 100)
+      }
+    } finally {
+      setActionLoadingId(null)
+    }
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
 
-  const handleBulkDelete = useCallback(
-    createBulkActionHandler('Deleting', 
-      (id: string) => {
-        if (!RentalRequestService || typeof RentalRequestService.deleteRequest !== 'function') {
-          throw new Error('RentalRequestService.deleteRequest is not available')
+  const handleReopen = useCallback(async (id: string) => {
+    setActionLoadingId(id)
+    let prevState: typeof data | null = null;
+    try {
+      const req = findRequest(id)
+      // Save previous state for rollback
+      prevState = data;
+      setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
+        const req = prev.requests.find(r => r.id === id)
+        return {
+          ...prev,
+          requests: prev.requests.map(r => 
+            r.id === id ? { ...r, status: 'Pending' } : r
+          ),
+          fleet: req ? prev.fleet.map(f => 
+            f.id === req.equipment_id ? { ...f, status: 'In Use' } : f
+          ) : prev.fleet
         }
-        return RentalRequestService.deleteRequest(id)
+      })
+      
+      if (!RentalRequestService || typeof RentalRequestService.reopenRequest !== 'function') {
+        throw new Error('RentalRequestService.reopenRequest is not available')
       }
-    ),
-    [createBulkActionHandler]
-  )
+      await RentalRequestService.reopenRequest(id)
+      notify.success('Request reopened.')
+      await logAudit('Reopened rental request', {
+        request_id: id,
+        equipment_id: req?.equipment_id,
+        equipment_name: req?.equipment?.name,
+        request_user_id: req?.user_id
+      })
+    } catch (error) {
+      console.error('Error in Reopen action:', error)
+      notify.error(error instanceof Error ? error.message : 'Failed to reopen request')
+      // Rollback optimistic update on error
+      if (prevState) {
+        setData(prevState)
+      } else {
+        setTimeout(() => {
+          debouncedFetch(true)
+        }, 100)
+      }
+    } finally {
+      setActionLoadingId(null)
+    }
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
+
+  const handleCancel = useCallback(async (id: string) => {
+    setActionLoadingId(id)
+    let prevState: typeof data | null = null;
+    try {
+      const req = findRequest(id)
+      // Save previous state for rollback
+      prevState = data;
+      setData((prev: { requests: RentalRequest[]; fleet: FleetItem[]; stats: DashboardStats | null }) => {
+        const req = prev.requests.find(r => r.id === id)
+        return {
+          ...prev,
+          requests: prev.requests.map(r => 
+            r.id === id ? { ...r, status: 'Cancelled' } : r
+          ),
+          fleet: req ? prev.fleet.map(f => 
+            f.id === req.equipment_id ? { ...f, status: 'Available' } : f
+          ) : prev.fleet
+        }
+      })
+      
+      if (!RentalRequestService || typeof RentalRequestService.cancelRequest !== 'function') {
+        throw new Error('RentalRequestService.cancelRequest is not available')
+      }
+      await RentalRequestService.cancelRequest(id)
+      notify.success('Request cancelled.')
+      await logAudit('Cancelled rental request', {
+        request_id: id,
+        equipment_id: req?.equipment_id,
+        equipment_name: req?.equipment?.name,
+        request_user_id: req?.user_id
+      })
+    } catch (error) {
+      console.error('Error in Cancel action:', error)
+      notify.error(error instanceof Error ? error.message : 'Failed to cancel request')
+      // Rollback optimistic update on error
+      if (prevState) {
+        setData(prevState)
+      } else {
+        setTimeout(() => {
+          debouncedFetch(true)
+        }, 100)
+      }
+    } finally {
+      setActionLoadingId(null)
+    }
+  }, [findRequest, logAudit, debouncedFetch, data, notify, setActionLoadingId])
+
+
+
+  const handleBulkApprove = useCallback(async (ids: string[]) => {
+    if (!RentalRequestService || typeof RentalRequestService.approveRequest !== 'function') {
+      notify.error('Service method for Approving is not available')
+      return
+    }
+
+    notify.info(`Approving ${ids.length} requests...`)
+    try {
+      await Promise.all(ids.map(id => RentalRequestService.approveRequest(id)))
+      notify.success(`${ids.length} requests approved successfully.`)
+      
+      // Use a small delay for smoother UX
+      setTimeout(() => {
+        debouncedFetch()
+      }, 100)
+    } catch (error) {
+      console.error('Error in bulk Approve action:', error)
+      notify.error(`Failed to approve all requests. ${error instanceof Error ? error.message : ''}`)
+    }
+  }, [debouncedFetch, notify])
+
+  const handleBulkDecline = useCallback(async (ids: string[]) => {
+    if (!RentalRequestService || typeof RentalRequestService.declineRequest !== 'function') {
+      notify.error('Service method for Declining is not available')
+      return
+    }
+
+    notify.info(`Declining ${ids.length} requests...`)
+    try {
+      await Promise.all(ids.map(id => RentalRequestService.declineRequest(id)))
+      notify.success(`${ids.length} requests declined successfully.`)
+      
+      // Use a small delay for smoother UX
+      setTimeout(() => {
+        debouncedFetch()
+      }, 100)
+    } catch (error) {
+      console.error('Error in bulk Decline action:', error)
+      notify.error(`Failed to decline all requests. ${error instanceof Error ? error.message : ''}`)
+    }
+  }, [debouncedFetch, notify])
+
+  const handleBulkDelete = useCallback(async (ids: string[]) => {
+    if (!RentalRequestService || typeof RentalRequestService.deleteRequest !== 'function') {
+      notify.error('Service method for Deleting is not available')
+      return
+    }
+
+    notify.info(`Deleting ${ids.length} requests...`)
+    try {
+      await Promise.all(ids.map(id => RentalRequestService.deleteRequest(id)))
+      notify.success(`${ids.length} requests deleted successfully.`)
+      
+      // Use a small delay for smoother UX
+      setTimeout(() => {
+        debouncedFetch()
+      }, 100)
+    } catch (error) {
+      console.error('Error in bulk Delete action:', error)
+      notify.error(`Failed to delete all requests. ${error instanceof Error ? error.message : ''}`)
+    }
+  }, [debouncedFetch, notify])
 
   const handleFleetDelete = useCallback(async (id: string) => {
     setActionLoadingId(id)
@@ -830,7 +894,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [logAudit, debouncedFetch])
+  }, [logAudit, debouncedFetch, notify])
 
   const handleEdit = useCallback(async (id: string, updatedFields: Partial<RentalRequest>) => {
     setActionLoadingId(id)
@@ -846,7 +910,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setActionLoadingId(null)
     }
-  }, [logAudit, debouncedFetch])
+  }, [logAudit, debouncedFetch, notify])
 
   const handleFleetStatusUpdate = async (fleetId: string, newStatus: FleetStatus) => {
     try {
@@ -1391,13 +1455,13 @@ const DashboardContent = ({
         return null
     }
   }, [
-    tab, loading, getActionLoadingId(), requests, fleet, emptyFleet, 
+    tab, loading, requests, fleet, emptyFleet, 
     refreshInterval, autoRefreshEnabled, deleteDialog, detailsId,
     dashboardStats, realtimeStatus,
     handleApprove, handleDecline, handleEdit, handleComplete,
     handleReopen, handleCancel, handleViewDetails, handleBulkApprove, handleBulkDecline,
     handleBulkDelete, handleFleetDelete, debouncedFetch, fetchAuditLog,
-    setDetailsId, TabContent
+    setDetailsId, notify, setActionLoadingId
   ])
 
   return (
