@@ -8,8 +8,6 @@ import { cn } from '@/features/shared/lib/utils'
 import { useLanguage } from "@/contexts/language-context"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/features/shared/hooks/use-auth"
-import { Suspense } from "react"
-import { Metadata } from "next"
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'

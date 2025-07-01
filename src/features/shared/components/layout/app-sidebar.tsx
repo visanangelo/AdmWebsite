@@ -67,16 +67,17 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: { activeTab?: s
 
   const handleTabClick = (item: typeof navMain[0]) => {
     if (item.external) {
-      window.location.href = item.url
+      window.location.href = item.url;
     } else {
-      onTabChange && onTabChange(item.tab)
+      if (onTabChange) {
+        onTabChange(item.tab);
+      }
     }
-    
+
     // Close mobile sidebar after tab click
     if (isMobile) {
-      return setOpenMobile(false);
+      setOpenMobile(false);
     }
-    
   }
 
   return (

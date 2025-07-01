@@ -28,12 +28,12 @@ class PerformanceMonitor {
   // Track cache performance
   trackCacheHit() {
     this.metrics.cacheHits++
-    this.logMetric('cache_hit', { hits: this.metrics.cacheHits })
+    this.logMetric()
   }
 
   trackCacheMiss() {
     this.metrics.cacheMisses++
-    this.logMetric('cache_miss', { misses: this.metrics.cacheMisses })
+    this.logMetric()
   }
 
   // Track data fetching performance
@@ -47,7 +47,7 @@ class PerformanceMonitor {
       const duration = performance.now() - startTime
       this.metrics.fetchTimes.push(duration)
       this.startTimes.delete(key)
-      this.logMetric('fetch_time', { duration, avg: this.getAverageFetchTime() })
+      this.logMetric()
     }
   }
 
@@ -62,7 +62,7 @@ class PerformanceMonitor {
       const duration = performance.now() - startTime
       this.metrics.actionTimes.push(duration)
       this.startTimes.delete(key)
-      this.logMetric('action_time', { duration, avg: this.getAverageActionTime() })
+      this.logMetric()
     }
   }
 
@@ -77,7 +77,7 @@ class PerformanceMonitor {
       const duration = performance.now() - startTime
       this.metrics.tabSwitchTimes.push(duration)
       this.startTimes.delete('tab_switch')
-      this.logMetric('tab_switch_time', { duration, avg: this.getAverageTabSwitchTime() })
+      this.logMetric()
     }
   }
 
@@ -117,7 +117,7 @@ class PerformanceMonitor {
   }
 
   // Log metrics (can be extended to send to analytics service)
-  private logMetric(_: string, __: Record<string, unknown>) {
+  private logMetric() {
     // Comment out to silence performance logs
     // if (process.env.NODE_ENV === 'development') {
     //   console.log(`[Performance] ${type}:`, data)
