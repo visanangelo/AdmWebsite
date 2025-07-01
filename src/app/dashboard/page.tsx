@@ -1210,7 +1210,6 @@ const DashboardContent = ({
                     onBulkDecline={handleBulkDecline}
                     onBulkDelete={handleBulkDelete}
                     loading={false}
-                    error={error || undefined}
                     actionLoadingId={getActionLoadingId()}
                     pageSize={10}
                     enablePagination={true}
@@ -1395,7 +1394,7 @@ const DashboardContent = ({
   }, [
     tab, loading, getActionLoadingId(), requests, fleet, emptyFleet, 
     refreshInterval, autoRefreshEnabled, deleteDialog, detailsId,
-    dashboardStats, realtimeStatus, error,
+    dashboardStats, realtimeStatus,
     handleApprove, handleDecline, handleEdit, handleComplete,
     handleReopen, handleCancel, handleViewDetails, handleBulkApprove, handleBulkDecline,
     handleBulkDelete, handleFleetDelete, debouncedFetch, fetchAuditLog,
