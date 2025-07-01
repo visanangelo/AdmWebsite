@@ -11,7 +11,6 @@ import type { RentalRow } from "@/features/rental-requests/components/data-table
 interface RequestsTabProps {
   loading: boolean
   requests: RentalRequest[]
-  error: string | null
   lastFetch: Date
   actionLoadingId: string | null
   deleteDialog: { open: boolean; id: string | null; row: RentalRow | null }
@@ -31,15 +30,12 @@ interface RequestsTabProps {
   onDirectDeleteConfirm: () => Promise<void>
   onDirectDeleteCancel: () => void
   onSetDetailsId: (id: string | null) => void
-  onFilterByUser: (userId: string) => Promise<void>
-  onFilterByEquipment: (equipmentId: string) => Promise<void>
   onClearIndexedFilters: () => Promise<void>
 }
 
 const RequestsTab: React.FC<RequestsTabProps> = ({
   loading,
   requests,
-  error,
   lastFetch,
   actionLoadingId,
   deleteDialog,
@@ -59,8 +55,6 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
   onDirectDeleteConfirm,
   onDirectDeleteCancel,
   onSetDetailsId,
-  onFilterByUser,
-  onFilterByEquipment,
   onClearIndexedFilters
 }) => {
   return (
@@ -118,14 +112,10 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
             onBulkDecline={onBulkDecline}
             onBulkDelete={onBulkDelete}
             loading={false}
-            error={error || undefined}
-            actionLoadingId={actionLoadingId || undefined}
             pageSize={10}
             enablePagination={true}
             enableColumnVisibility={true}
             enableBulkActions={true}
-            onFilterByUser={onFilterByUser}
-            onFilterByEquipment={onFilterByEquipment}
             onClearIndexedFilters={onClearIndexedFilters}
           />
         )}
