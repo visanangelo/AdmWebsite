@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { Button } from '@/features/shared/components/ui/button'
-import { Menu, X, Phone, Globe, LogIn, LogOut, User } from "lucide-react"
+import { X, Phone, Globe, LogIn, LogOut, User } from "lucide-react"
 import { cn } from '@/features/shared/lib/utils'
 import { useLanguage } from "@/contexts/language-context"
 import { useRouter } from "next/navigation"
@@ -13,14 +13,6 @@ import { Metadata } from "next"
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
-
-const navigation = [
-  { name: "Home", href: "/" },
-  { name: "Services", href: "#services" },
-  { name: "Projects", href: "#projects" },
-  { name: "About", href: "#about" },
-  { name: "Contact", href: "#contact" },
-]
 
 // Debounce function for scroll events
 function debounce<T extends (...args: unknown[]) => unknown>(
@@ -39,7 +31,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { t, language, setLanguage } = useLanguage()
   const router = useRouter()
-  const { user, loading, signOut, isAdmin, isAuthenticated } = useAuth()
+  const { loading, signOut, isAdmin, isAuthenticated } = useAuth()
 
   // Memoized scroll handler with debouncing
   const handleScroll = useCallback(

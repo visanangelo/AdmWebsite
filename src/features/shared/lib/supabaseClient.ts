@@ -21,7 +21,7 @@ export function getSupabaseClient() {
 export const getConnectionStatus = async () => {
   try {
     const supabase = getSupabaseClient();
-    const { data, error } = await supabase.from('rental_requests').select('count').limit(1);
+    const { error } = await supabase.from('rental_requests').select('count').limit(1);
     return { connected: !error, error };
   } catch (error) {
     return { connected: false, error };

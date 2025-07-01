@@ -74,8 +74,9 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: { activeTab?: s
     
     // Close mobile sidebar after tab click
     if (isMobile) {
-      setOpenMobile(false)
+      return setOpenMobile(false);
     }
+    
   }
 
   return (

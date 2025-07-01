@@ -41,37 +41,15 @@ import {
   ChevronsRightIcon,
 } from "lucide-react"
 import { toast } from "sonner"
-import { useState, useEffect, useCallback, useMemo } from "react"
-import { cn } from "@/features/shared"
-
-import { Badge } from "@/features/shared/components/ui/badge"
-import { Button } from "@/features/shared/components/ui/button"
-import { Checkbox } from "@/features/shared/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-} from "@/features/shared/components/ui/dropdown-menu"
-import { Input } from "@/features/shared/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/features/shared/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/features/shared/components/ui/table"
-import { Label } from "@/features/shared/components/ui/label"
+import { useState, useCallback, useMemo } from "react"
+import { Badge } from '@/features/shared/components/ui/badge';
+import { Button } from '@/features/shared/components/ui/button';
+import { Checkbox } from '@/features/shared/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem } from '@/features/shared/components/ui/dropdown-menu';
+import { Input } from '@/features/shared/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/shared/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/features/shared/components/ui/table';
+import { Label } from '@/features/shared/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -89,7 +67,6 @@ import {
 } from "@/features/shared/components/ui/tooltip"
 import { Skeleton } from "@/features/shared/components/ui/skeleton"
 import { ActionButtons } from './ActionButtons'
-import { RentalRequest, FleetItem } from '@/features/shared'
 import { useIsMobile } from '@/features/shared'
 
 // Rename local Row interface to RentalRow
@@ -432,7 +409,7 @@ function DataTableToolbar({
             <Input
               placeholder="Search requests..."
               value={globalFilter ?? ""}
-              onChange={(event) => setGlobalFilter(event.target.value)}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setGlobalFilter(event.target.value)}
               className="pl-10 h-10 md:h-9"
             />
           </div>
@@ -494,7 +471,7 @@ function DataTableToolbar({
                         key={column.id}
                         className="capitalize"
                         checked={column.getIsVisible()}
-                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                        onCheckedChange={(value: boolean | 'indeterminate') => column.toggleVisibility(!!value)}
                       >
                         {column.id}
                       </DropdownMenuCheckboxItem>
@@ -515,7 +492,7 @@ function DataTableToolbar({
               <Input
                 type="date"
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
                 className="h-9 text-sm"
               />
             </div>
@@ -524,7 +501,7 @@ function DataTableToolbar({
               <Input
                 type="date"
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
                 className="h-9 text-sm"
               />
             </div>
@@ -552,7 +529,7 @@ function DataTableToolbar({
             <Input
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
               className="h-9 w-40"
             />
           </div>
@@ -561,7 +538,7 @@ function DataTableToolbar({
             <Input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
               className="h-9 w-40"
             />
           </div>
@@ -633,7 +610,7 @@ function DataTablePagination({ table, pagination, setPagination }: { table: Retu
             open={open}
             onOpenChange={setOpen}
             value={`${pagination.pageSize}`}
-            onValueChange={(value) => {
+            onValueChange={(value: string) => {
               setPagination({ ...pagination, pageSize: Number(value), pageIndex: 0 });
               setOpen(false);
             }}
@@ -753,8 +730,8 @@ const QuickActions = React.memo(({ row, onAction, actionLoadingId }: {
 
 QuickActions.displayName = 'QuickActions'
 
-// Remove globalStringFilterFn, only keep globalFuzzyFilterFn with types:
-function globalFuzzyFilterFn(row: Row<RentalRow>, columnId: string, filterValue: string) {
+// Find the globalFuzzyFilterFn function and ensure the parameter types are explicit:
+function globalFuzzyFilterFn(row: Row<RentalRow>, columnId: string, filterValue: string): boolean {
   // Search across all visible string columns
   const values = Object.values(row.original)
     .filter(v => typeof v === 'string')
@@ -1112,11 +1089,11 @@ export function DataTable({
         columnFilters={columnFilters}
         setColumnFilters={setColumnFilters}
         dateFrom={dateFrom}
-        setDateFrom={setDateFrom}
+        setDateFrom={(value: string) => setDateFrom(value)}
         dateTo={dateTo}
-        setDateTo={setDateTo}
+        setDateTo={(value: string) => setDateTo(value)}
         globalFilter={globalFilter}
-        setGlobalFilter={setGlobalFilter}
+        setGlobalFilter={(value: string) => setGlobalFilter(value)}
         onFilterByUser={onFilterByUser}
         onFilterByEquipment={onFilterByEquipment}
         onClearIndexedFilters={onClearIndexedFilters}
