@@ -3,10 +3,11 @@ import { Button } from "@/features/shared/components/ui/button"
 import { Badge } from "@/features/shared/components/ui/badge"
 import { Trash2Icon } from "lucide-react"
 import { FleetItem } from '@/features/shared'
+import type { FleetStatus } from '@/types/rental'
 
 export const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
   eq: FleetItem
-  onStatus: (id: string, status: string) => void
+  onStatus: (id: string, status: FleetStatus) => void
   onDelete: (id: string) => void
   loadingId?: string | null | undefined
 }) {
@@ -30,7 +31,7 @@ export const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete,
         <div className="flex flex-col gap-2">
           <select
             value={eq.status}
-            onChange={(e) => onStatus(eq.id, e.target.value)}
+            onChange={(e) => onStatus(eq.id, e.target.value as FleetStatus)}
             disabled={isLoading}
             className="px-3 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-ring"
           >

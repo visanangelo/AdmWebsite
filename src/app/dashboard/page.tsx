@@ -1,28 +1,29 @@
 "use client"
 
 import '../../../styles/dashboard-theme.css'
-import { AppSidebar } from "@/components/app-sidebar"
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
-import { SectionCards } from "@/components/section-cards"
-import { SiteHeader } from "@/components/site-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/features/shared/components/layout/app-sidebar"
+import { ChartAreaInteractive } from "@/features/shared/components/chart-area-interactive"
+import { DataTable } from "@/features/rental-requests"
+import { SectionCards } from "@/features/shared/components/section-cards"
+import { SiteHeader } from "@/features/shared/components/layout/site-header"
+import { SidebarInset, SidebarProvider } from "@/features/shared/components/ui/sidebar"
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 import { useNotify } from '@/hooks/useNotify'
 import { useSearchParams, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/features/shared/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/features/shared/components/ui/dialog"
+import { Skeleton } from "@/features/shared/components/ui/skeleton"
 import { AnimatePresence, motion } from "framer-motion"
 import { RentalRequestService } from "@/services/rental-requests"
 import React from "react"
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card"
+import { Card, CardHeader, CardContent, CardTitle } from "@/features/shared/components/ui/card"
 import { Truck, CheckCircle, Clock, AlertCircle, RefreshCwIcon, Trash2Icon, EyeIcon } from "lucide-react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/features/shared/components/ui/tabs"
+import { Badge } from "@/features/shared/components/ui/badge"
 import { RentalRequest, FleetItem } from '@/types/rental'
 import { useAuth } from '@/hooks/use-auth'
+import type { FleetStatus } from '@/types/rental'
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
@@ -171,7 +172,7 @@ const DataTableSkeleton = () => (
 // Enhanced Fleet Card with better visual design
 const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
   eq: FleetItem
-  onStatus: (id: string, status: string) => void
+  onStatus: (id: string, status: FleetStatus) => void
   onDelete: (id: string) => void
   loadingId?: string | null | undefined
 }) {
@@ -213,7 +214,7 @@ const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadin
         <div className="flex gap-2">
           <select
             value={eq.status}
-            onChange={(e) => onStatus(eq.id, e.target.value)}
+            onChange={(e) => onStatus(eq.id, e.target.value as import('@/types/rental').FleetStatus)}
             disabled={isLoading}
             className="text-sm border border-gray-200/60 rounded-lg px-3 py-2 bg-white/80 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -490,7 +491,7 @@ interface DashboardContextType {
   handleBulkDecline: (ids: string[]) => Promise<void>
   handleBulkDelete: (ids: string[]) => Promise<void>
   handleFleetDelete: (id: string) => Promise<void>
-  handleFleetStatusUpdate: (fleetId: string, newStatus: string) => Promise<void>
+  handleFleetStatusUpdate: (fleetId: string, newStatus: FleetStatus) => Promise<void>
   handleEdit: (id: string, updatedFields: any) => Promise<void>
   handleDirectDeleteConfirm?: () => Promise<void>
   handleDirectDeleteCancel?: () => void
@@ -555,42 +556,42 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
   const createActionHandler = useCallback((actionType: string, serviceMethod: (id: string) => Promise<void>, successMessage: string, optimisticUpdate?: (id: string) => void) => {
     return async (id: string) => {
       setActionLoadingId(id)
+      let prevState: typeof data | null = null;
       try {
         const req = findRequest(id)
-        
-        // Apply optimistic update if provided
+        // Save previous state for rollback
         if (optimisticUpdate) {
+          prevState = data;
           optimisticUpdate(id)
         }
-        
         // Validate service method exists
         if (!serviceMethod || typeof serviceMethod !== 'function') {
           throw new Error(`Service method for ${actionType} is not available`)
         }
-        
         await serviceMethod(id)
         notify.success(successMessage)
-        
         await logAudit(`${actionType} rental request`, {
           request_id: id,
           equipment_id: req?.equipment_id,
           equipment_name: req?.equipment?.name,
           request_user_id: req?.user_id
         })
-        
       } catch (error) {
         console.error(`Error in ${actionType} action:`, error)
         notify.error(error instanceof Error ? error.message : `Failed to ${actionType.toLowerCase()} request`)
-        
-        // Revert optimistic update on error
-        setTimeout(() => {
-          debouncedFetch(true)
-        }, 100)
+        // Rollback optimistic update on error
+        if (prevState) {
+          setData(prevState)
+        } else {
+          setTimeout(() => {
+            debouncedFetch(true)
+          }, 100)
+        }
       } finally {
         setActionLoadingId(null)
       }
     }
-  }, [findRequest, logAudit, debouncedFetch])
+  }, [findRequest, logAudit, debouncedFetch, data])
 
   const handleApprove = useCallback(
     createActionHandler('Approved', 
@@ -688,7 +689,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
           return {
             ...prev,
             requests: prev.requests.map(r => 
-              r.id === id ? { ...r, status: 'Reopened' } : r
+              r.id === id ? { ...r, status: 'Pending' } : r
             ),
             fleet: req ? prev.fleet.map(f => 
               f.id === req.equipment_id ? { ...f, status: 'In Use' } : f
@@ -818,7 +819,7 @@ const DashboardProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [logAudit, debouncedFetch])
 
-  const handleFleetStatusUpdate = async (fleetId: string, newStatus: string) => {
+  const handleFleetStatusUpdate = async (fleetId: string, newStatus: FleetStatus) => {
     try {
       // Optimistic update
       setData(prev => ({
@@ -1419,7 +1420,7 @@ const DashboardContent = ({
                       <FleetCard
                         key={eq.id}
                         eq={eq}
-                        onStatus={async (id: string, status: string) => {
+                        onStatus={async (id: string, status: FleetStatus) => {
                           setActionLoadingId(id)
                           try {
                             await handleFleetStatusUpdate(id, status)

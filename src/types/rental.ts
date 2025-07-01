@@ -1,4 +1,14 @@
 /**
+ * Valid statuses for a rental request.
+ */
+export type RentalRequestStatus = 'Pending' | 'Approved' | 'Declined' | 'Completed' | 'Cancelled';
+
+/**
+ * Valid statuses for a fleet item (equipment).
+ */
+export type FleetStatus = 'Available' | 'In Use' | 'Reserved' | 'Maintenance';
+
+/**
  * Represents a rental request for a piece of equipment.
  */
 export interface RentalRequest {
@@ -17,11 +27,11 @@ export interface RentalRequest {
   /** Optional notes for the request */
   notes: string;
   /** Status of the request (Pending, Approved, etc.) */
-  status: string;
+  status: RentalRequestStatus;
   /** Timestamp when the request was created */
   created_at: string;
   /** Embedded equipment info (optional) */
-  equipment?: { name: string; status: string };
+  equipment?: { name: string; status: FleetStatus };
   /** Date string for display (optional) */
   date?: string;
   /** Requester name or ID for display (optional) */
@@ -32,7 +42,7 @@ export interface RentalRequest {
  * Filters for querying rental requests.
  */
 export interface RentalRequestFilters {
-  status?: string;
+  status?: RentalRequestStatus;
   equipment?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -56,5 +66,5 @@ export interface CreateRequestData {
 export interface FleetItem {
   id: string;
   name: string;
-  status: string;
+  status: FleetStatus;
 } 

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { RentalRequestService } from '@/features/rental-requests/services/rental-requests';
 import { RentalRequest } from '@/features/shared/types/rental';
 import { getSupabaseClient } from '@/features/shared/lib/supabaseClient';
+import type { FleetStatus, RentalRequestStatus } from '@/types/rental';
 
 interface DashboardData {
   requests: RentalRequest[];
@@ -17,7 +18,7 @@ type LogAudit = (action: string, details?: any) => Promise<void>;
 type Handler = (id: string) => Promise<void>;
 type BulkHandler = (ids: string[]) => Promise<void>;
 type EditHandler = (id: string, updatedFields: any) => Promise<void>;
-type FleetStatusHandler = (fleetId: string, newStatus: string) => Promise<void>;
+type FleetStatusHandler = (fleetId: string, newStatus: FleetStatus) => Promise<void>;
 
 export function useDashboardActions({ setData, fetchData, findRequest, logAudit }: {
   setData: SetData;
@@ -189,7 +190,7 @@ export function useDashboardActions({ setData, fetchData, findRequest, logAudit 
   );
 
   const handleFleetStatusUpdate: FleetStatusHandler = useCallback(
-    async (fleetId: string, newStatus: string) => {
+    async (fleetId: string, newStatus: FleetStatus) => {
       setData(prev => ({
         ...prev,
         fleet: prev.fleet.map(item =>

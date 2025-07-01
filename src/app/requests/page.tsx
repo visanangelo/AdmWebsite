@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { RentalRequestService } from "@/services/rental-requests";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/features/shared/components/ui/input";
+import { Textarea } from "@/features/shared/components/ui/textarea";
+import { Button } from "@/features/shared/components/ui/button";
 import { useNotify } from '@/hooks/useNotify';
 import { Calendar, MapPin, Wrench, Clock, CheckCircle, AlertCircle } from "lucide-react";
 

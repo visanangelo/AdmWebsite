@@ -56,8 +56,8 @@ class RentalRequestService {
         .select("id, user_id, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status)", { count: 'exact' })
 
       // Apply filters
-      if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status)
+      if (filters?.status && filters.status !== ('all' as any)) {
+        query = query.eq('status', filters.status as import('../types/rental').RentalRequestStatus)
       }
       
       if (filters?.equipment && filters.equipment !== 'all') {
@@ -100,7 +100,7 @@ class RentalRequestService {
           end_date: r.end_date as string,
           project_location: r.project_location as string,
           notes: r.notes as string,
-          status: r.status as string,
+          status: r.status as import('../types/rental').RentalRequestStatus,
           created_at: r.created_at as string,
           equipment: equipmentData?.name || 'Unknown',
           requester: r.user_id as string,
@@ -287,7 +287,7 @@ class RentalRequestService {
     this.clearStatsCache()
   }
 
-  static async updateFleetStatus(id: string, status: string): Promise<void> {
+  static async updateFleetStatus(id: string, status: import('../types/rental').FleetStatus): Promise<void> {
     const { error } = await getSupabaseClient()
       .from("fleet")
       .update({ status })
