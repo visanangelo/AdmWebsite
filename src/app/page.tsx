@@ -1,14 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import type React from "react"
 
 import { Button } from "@/features/shared/components/ui/button"
 import { Card, CardContent } from "@/features/shared/components/ui/card"
-import { Input } from "@/features/shared/components/ui/input"
-import { Textarea } from "@/features/shared/components/ui/textarea"
-import { Label } from "@/features/shared/components/ui/label"
 import {
   Phone,
   Mail,
@@ -20,12 +16,7 @@ import {
   Star,
   Users,
   Award,
-  Home,
   Building2,
-  PaintBucket,
-  Settings,
-  HardHat,
-  Clipboard,
   Quote,
   FileCheck,
   Target,
@@ -48,11 +39,6 @@ export const dynamic = 'force-dynamic'
 export default function HomePage() {
   const { language, setLanguage } = useLanguage();
   const t = translations[language];
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
 
   return (
     <div className="min-h-screen bg-white">

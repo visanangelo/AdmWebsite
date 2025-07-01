@@ -969,7 +969,6 @@ const DashboardContent = ({
     autoRefreshEnabled,
     refreshInterval,
     realtimeStatus,
-    fetchData,
     debouncedFetch,
     setActionLoadingId,
     handleApprove,
@@ -1467,7 +1466,7 @@ export default function Page() {
     if (auditLogLoaded) return; // Skip if already loaded
     
     try {
-      const { data, error } = await getSupabaseClient()
+      const { error } = await getSupabaseClient()
         .from('audit_log')
         .select('*')
         .order('created_at', { ascending: false })
