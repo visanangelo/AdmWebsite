@@ -1079,10 +1079,10 @@ const DashboardContent = ({
 
   const emptyFleet = fleet.length === 0
 
-  const handleDeleteWrapper = useCallback(async (id: string) => {
+  const handleDeleteWrapper = async (id: string) => {
     const row = requests.find(r => r.id === id) ?? null;
     setDeleteDialog({ open: true, id, row });
-  }, [requests, setDeleteDialog])
+  }
 
   const handleViewDetails = useCallback(async (id: string) => {
     setDetailsId(id)
@@ -1142,7 +1142,7 @@ const DashboardContent = ({
   }, [setDeleteDialog])
 
   // Helper function to convert actionLoadingId type
-  const getActionLoadingId = useCallback((): string | null | undefined => actionLoadingId || undefined, [actionLoadingId])
+  const getActionLoadingId = (): string | null | undefined => actionLoadingId || undefined
 
   // Memoize tab content to prevent unnecessary re-renders
   const tabContent = useMemo(() => {
