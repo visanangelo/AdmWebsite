@@ -56,7 +56,7 @@ export default function RequestsPage() {
       }
       setFleetLoading(false);
     });
-  }, [notify]);
+  }, []); // Removed notify from dependencies to prevent infinite re-renders
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
