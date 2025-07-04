@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { RentalRequestService } from "@/services/rental-requests";
 import { Input } from "@/features/shared/components/ui/input";
@@ -24,6 +24,8 @@ export default function RequestsPage() {
   const [fleetLoading, setFleetLoading] = useState(true);
 
   const notify = useNotify();
+  const notifyRef = useRef(notify);
+  notifyRef.current = notify;
 
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
@@ -34,7 +36,7 @@ export default function RequestsPage() {
     RentalRequestService.fetchFleet().then(({ data, error }) => {
       if (error) {
         console.error('Fleet loading error:', error);
-        notify.error('Failed to load equipment list');
+        notifyRef.current.error('Failed to load equipment list');
       } else {
         console.log('Fleet loaded:', data);
         setFleet(
@@ -56,7 +58,7 @@ export default function RequestsPage() {
       }
       setFleetLoading(false);
     });
-  }, []); // Removed notify from dependencies to prevent infinite re-renders
+  }, []); // Using notifyRef.current to avoid dependency issues
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
