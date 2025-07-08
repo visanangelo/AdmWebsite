@@ -127,6 +127,29 @@
     }
     body {
         @apply bg-background text-foreground font-sans antialiased;
+        /* Mobile touch improvements */
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    /* Allow text selection in inputs and textareas */
+    input,
+    textarea,
+    [contenteditable] {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+    }
+    /* Improve touch targets on mobile */
+    button,
+    input,
+    select,
+    textarea {
+        touch-action: manipulation;
     }
     /* Enhanced scrollbar styling for modern look */
      ::-webkit-scrollbar {

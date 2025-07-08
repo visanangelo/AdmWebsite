@@ -118,14 +118,25 @@ export function useAuth() {
       // Clear cache immediately
       clearCache()
       
+      // Force immediate state reset for better UX
+      updateUserState(null, null)
+      
       const { error } = await getSupabaseClient().auth.signOut()
       
       if (error) {
         throw error
       }
       
-      // Update state after successful sign out
-      updateUserState(null, null)
+      // Ensure state is properly cleared
+      setState(prev => ({
+        ...prev,
+        user: null,
+        session: null,
+        isAuthenticated: false,
+        isAdmin: false,
+        loading: false,
+        error: null
+      }))
     } catch (error) {
       handleError(error as Error)
     }
