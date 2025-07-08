@@ -13,24 +13,10 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
-export interface DashboardState {
-  data: {
-    requests: import('@/types/rental').RentalRequest[];
-    fleet: import('@/types/rental').FleetItem[];
-    stats: DashboardStats | null;
-  };
-  loading: boolean;
-  error: string | null;
-  lastFetch: Date;
-  actionLoadingId: string | null;
-  tab: string;
-  autoRefreshEnabled: boolean;
-  refreshInterval: number;
-  realtimeStatus: 'connected' | 'disconnected' | 'connecting';
-}
+import type { RentalRow } from '@/features/rental-requests/components/data-table'
 
 export interface DeleteDialogState {
   open: boolean;
   id: string | null;
-  row: any | null;
+  row: RentalRow | null;
 } 

@@ -1,14 +1,13 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useState, useMemo } from 'react'
 import { useDataFetching } from '../hooks/useDataFetching'
 import { useDashboardActions } from '../hooks/useDashboardActions'
-import { DashboardStats, DeleteDialogState } from '../types'
 import { RentalRequest, FleetItem, FleetStatus } from '@/types/rental'
 
 interface DashboardContextType {
   data: {
     requests: RentalRequest[]
     fleet: FleetItem[]
-    stats: DashboardStats | null
+    stats: import('../types').DashboardStats | null
   }
   loading: boolean
   error: string | null
@@ -27,7 +26,7 @@ interface DashboardContextType {
   setData: React.Dispatch<React.SetStateAction<{
     requests: RentalRequest[];
     fleet: FleetItem[];
-    stats: DashboardStats | null;
+    stats: import('../types').DashboardStats | null;
   }>>
   handleApprove: (id: string) => Promise<void>
   handleDecline: (id: string) => Promise<void>
@@ -64,7 +63,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
   const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting')
 
   // Use the data fetching hook
-  const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData, notify } = useDataFetching(setRealtimeStatus)
+  const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData } = useDataFetching(setRealtimeStatus)
 
   // Use the actions hook
   const actions = useDashboardActions({

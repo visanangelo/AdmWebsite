@@ -37,16 +37,31 @@ export const clearAuthSession = () => {
 };
 
 // Utility function to handle auth errors
-export const handleAuthError = async (error: any) => {
-  if (error?.message?.includes('Invalid Refresh Token') || 
-      error?.message?.includes('Refresh Token Not Found')) {
+export const handleAuthError = async (error: unknown) => {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof (error as { message?: unknown }).message === 'string' &&
+    ((error as { message: string }).message.includes('Invalid Refresh Token') ||
+      (error as { message: string }).message.includes('Refresh Token Not Found'))
+  ) {
     console.warn('Refresh token error detected, clearing session...');
     clearAuthSession();
     // Sign out to reset the auth state
     await supabase.auth.signOut();
     return { shouldRedirect: true, error: 'Session expired. Please log in again.' };
   }
-  return { shouldRedirect: false, error: error?.message || 'Authentication error' };
+  return {
+    shouldRedirect: false,
+    error:
+      error &&
+      typeof error === 'object' &&
+      'message' in error &&
+      typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : 'Authentication error',
+  };
 };
 
 export const getConnectionStatus = async () => {

@@ -1,7 +1,7 @@
 import React from 'react'
 import { DataTable } from "@/features/rental-requests"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, RentalRequest, Button, Badge, Card, CardContent } from "@/features/shared"
-import { RefreshCwIcon, Trash2Icon, EyeIcon, ClipboardListIcon } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, RentalRequest, Button, Badge, Card, CardContent } from "@/features/shared"
+import { RefreshCwIcon, Trash2Icon, EyeIcon } from "lucide-react"
 import { DataTableSkeleton } from "@/features/dashboard"
 import type { RentalRow } from "@/features/rental-requests/components/data-table";
 

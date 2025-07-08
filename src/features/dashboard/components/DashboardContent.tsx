@@ -9,7 +9,6 @@ import RequestsTab from "../../../app/dashboard/tabs/RequestsTab"
 import DashboardTab from "../../../app/dashboard/tabs/DashboardTab"
 import FleetTab from "../../../app/dashboard/tabs/FleetTab"
 import SettingsTab from "../../../app/dashboard/tabs/SettingsTab"
-import { RentalRequest } from '@/types/rental'
 import { DeleteDialogState } from '../types'
 
 interface DashboardContentProps {
@@ -38,7 +37,6 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
     setTab,
     autoRefreshEnabled,
     refreshInterval,
-    realtimeStatus,
     debouncedFetch,
     setActionLoadingId,
     setAutoRefreshEnabled,
@@ -196,13 +194,14 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
   }, [
     tab, loading, requests, fleet, 
     deleteDialog, detailsId,
-    dashboardStats, realtimeStatus,
+    dashboardStats,
     handleApprove, handleDecline, handleEdit, handleComplete,
     handleReopen, handleCancel, handleViewDetails, handleBulkApprove, handleBulkDecline,
     handleBulkDelete, handleFleetDelete, debouncedFetch,
-    setDetailsId, setActionLoadingId, handleDeleteWrapper, 
+    setDetailsId, handleDeleteWrapper, 
     handleDirectDeleteCancel, handleDirectDeleteConfirm, handleFleetStatusUpdate, lastFetch,
-    autoRefreshEnabled, refreshInterval, setAutoRefreshEnabled, setRefreshInterval
+    autoRefreshEnabled, refreshInterval, setAutoRefreshEnabled, setRefreshInterval,
+    actionLoadingId
   ])
 
   return (
