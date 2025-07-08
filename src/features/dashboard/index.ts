@@ -13,4 +13,4 @@ export { useDataFetching } from './hooks/useDataFetching'
 export { useDashboardActions } from './hooks/useDashboardActions'
 
 // Types
-export type { DashboardStats, AuditLogEntry, DashboardState, DeleteDialogState } from './types' 
+export type { DashboardStats, AuditLogEntry, DeleteDialogState } from './types' 
