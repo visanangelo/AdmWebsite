@@ -77,6 +77,6 @@ declare module 'tailwindcss' {
         }
       }
     }
-    plugins?: any[]
+    plugins?: unknown[]
   }
 } 

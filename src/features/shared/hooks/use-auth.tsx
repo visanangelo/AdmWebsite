@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { getSupabaseClient } from '@/features/shared/lib/supabaseClient'
+import { getSupabaseClient } from '@/features/shared'
 import { User, Session } from '@supabase/supabase-js'
 
 // Enhanced cache with session tracking
@@ -34,7 +34,7 @@ export function useAuth() {
     isAdmin: false
   })
   
-  const subscriptionRef = useRef<any>(null)
+  const subscriptionRef = useRef<unknown>(null)
   const mountedRef = useRef(true)
   const currentSessionIdRef = useRef<string | null>(null)
 
@@ -53,15 +53,34 @@ export function useAuth() {
     if (!mountedRef.current) return
     
     const isAuthenticated = !!user
-    // Only use app_metadata for role
-    const userRole = user?.app_metadata?.role
-    const isAdmin = userRole === 'super-admin'
+    // Check both app_metadata and user_metadata for role compatibility
+    const appMetadataRole = user?.app_metadata?.role
+    const userMetadataRole = user?.user_metadata?.role
     
-    // console.log('User role check:', {
-    //   userRole,
-    //   isAdmin,
-    //   appMetadata: user?.app_metadata
-    // })
+    // Support both 'admin' and 'super-admin' roles for backward compatibility
+    const isAdmin = appMetadataRole === 'super-admin' || 
+                   appMetadataRole === 'admin' || 
+                   userMetadataRole === 'admin' || 
+                   userMetadataRole === 'super-admin'
+    
+    console.log('🔍 User role check:', {
+      appMetadataRole,
+      userMetadataRole,
+      isAdmin,
+      appMetadata: user?.app_metadata,
+      userMetadata: user?.user_metadata,
+      hasSession: !!session,
+      hasAccessToken: !!session?.access_token
+    })
+
+    // Log warning if there's a role conflict
+    if (appMetadataRole && userMetadataRole && appMetadataRole !== userMetadataRole) {
+      console.warn('⚠️ Role conflict detected:', {
+        appMetadataRole,
+        userMetadataRole,
+        message: 'Using both roles for compatibility'
+      })
+    }
     
     setState(prev => ({
       ...prev,
@@ -198,7 +217,7 @@ export function useAuth() {
     return () => {
       mountedRef.current = false
       if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe()
+        (subscriptionRef.current as { unsubscribe: () => void } | null)?.unsubscribe?.()
       }
     }
   }, [getInitialUser, handleAuthStateChange])

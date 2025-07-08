@@ -1,12 +1,13 @@
 import type { Config } from "tailwindcss"
 
-const config: any = {
+const config: unknown = {
     content: [
         './pages/**/*.{ts,tsx}',
         './components/**/*.{ts,tsx}',
         './app/**/*.{ts,tsx}',
         './src/**/*.{ts,tsx}',
     ],
+    darkMode: ["class"],
     theme: {
         container: {
             center: true,
@@ -50,11 +51,44 @@ const config: any = {
                     DEFAULT: "hsl(var(--card))",
                     foreground: "hsl(var(--card-foreground))",
                 },
+                sidebar: {
+                    DEFAULT: "hsl(var(--sidebar-background))",
+                    foreground: "hsl(var(--sidebar-foreground))",
+                    primary: "hsl(var(--sidebar-primary))",
+                    "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+                    accent: "hsl(var(--sidebar-accent))",
+                    "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+                    border: "hsl(var(--sidebar-border))",
+                    ring: "hsl(var(--sidebar-ring))",
+                    tab: "hsl(var(--sidebar-tab))",
+                    "tab-foreground": "hsl(var(--sidebar-tab-foreground))",
+                },
+                chart: {
+                    "1": "hsl(var(--chart-1))",
+                    "2": "hsl(var(--chart-2))",
+                    "3": "hsl(var(--chart-3))",
+                    "4": "hsl(var(--chart-4))",
+                    "5": "hsl(var(--chart-5))",
+                },
+                status: {
+                    available: "hsl(var(--status-available))",
+                    "available-bg": "hsl(var(--status-available-bg))",
+                    "in-use": "hsl(var(--status-in-use))",
+                    "in-use-bg": "hsl(var(--status-in-use-bg))",
+                    reserved: "hsl(var(--status-reserved))",
+                    "reserved-bg": "hsl(var(--status-reserved-bg))",
+                    maintenance: "hsl(var(--status-maintenance))",
+                    "maintenance-bg": "hsl(var(--status-maintenance-bg))",
+                },
             },
             borderRadius: {
                 lg: "var(--radius)",
                 md: "calc(var(--radius) - 2px)",
                 sm: "calc(var(--radius) - 4px)",
+            },
+            boxShadow: {
+                custom: "var(--shadow)",
+                "custom-lg": "var(--shadow-lg)",
             },
             keyframes: {
                 "accordion-down": {
@@ -65,10 +99,15 @@ const config: any = {
                     from: { height: "var(--radix-accordion-content-height)" },
                     to: { height: "0" },
                 },
+                shimmer: {
+                    "0%": { transform: "translateX(-100%)" },
+                    "100%": { transform: "translateX(100%)" },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
+                shimmer: "shimmer 1.5s infinite",
             },
         },
     },

@@ -24,13 +24,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/features/*": ["./src/features/*"],
-      "@/features/shared/*": ["./src/features/shared/*"],
-      "@/features/dashboard/*": ["./src/features/dashboard/*"],
-      "@/features/rental-requests/*": ["./src/features/rental-requests/*"],
-      "@/features/fleet/*": ["./src/features/fleet/*"],
-      "@/features/auth/*": ["./src/features/auth/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
@@ -38,7 +32,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "src/features/shared/types/**/*.d.ts"
+    "src/types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

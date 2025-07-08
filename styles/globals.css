@@ -1,0 +1,293 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer utilities {
+    .text-balance {
+        text-wrap: balance;
+    }
+}
+
+@layer base {
+     :root {
+        /* Modern Shadcn Blue Theme - Light Mode */
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+        --primary: 221.2 83.2% 53.3%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 221.2 83.2% 53.3%;
+        --radius: 0.65rem;
+        /* Enhanced chart colors for light mode */
+        --chart-1: 221.2 83.2% 53.3%;
+        /* Primary blue */
+        --chart-2: 173 58% 39%;
+        /* Teal */
+        --chart-3: 197 37% 24%;
+        /* Dark blue */
+        --chart-4: 43 74% 66%;
+        /* Orange */
+        --chart-5: 27 87% 67%;
+        /* Red-orange */
+        /* Enhanced sidebar variables for modern look */
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 222.2 84% 4.9%;
+        --sidebar-primary: 221.2 83.2% 53.3%;
+        --sidebar-primary-foreground: 210 40% 98%;
+        --sidebar-accent: 210 40% 96.1%;
+        --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+        --sidebar-border: 214.3 31.8% 91.4%;
+        --sidebar-ring: 221.2 83.2% 53.3%;
+        --sidebar-tab: 0 0% 98%;
+        --sidebar-tab-foreground: 222.2 84% 4.9%;
+        /* Modern status colors with blue accent */
+        --status-available: 142 71% 45%;
+        /* Green */
+        --status-available-bg: 142 71% 97%;
+        --status-in-use: 221.2 83.2% 53.3%;
+        /* Primary blue */
+        --status-in-use-bg: 221.2 83.2% 97%;
+        --status-reserved: 48 96% 53%;
+        /* Amber */
+        --status-reserved-bg: 48 96% 97%;
+        --status-maintenance: 0 84.2% 60.2%;
+        /* Red */
+        --status-maintenance-bg: 0 84.2% 97%;
+        /* Enhanced shadows for depth */
+        --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+    .dark {
+        --background: 0 0% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 0 0% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 0 0% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 0 0% 9%;
+        --secondary: 0 0% 14.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 0 0% 14.9%;
+        --muted-foreground: 0 0% 63.9%;
+        --accent: 0 0% 14.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 14.9%;
+        --input: 0 0% 14.9%;
+        --ring: 0 0% 83.1%;
+        /* Enhanced chart colors for dark mode */
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+        /* Enhanced sidebar for dark mode */
+        --sidebar-background: 0 0% 3.9%;
+        --sidebar-foreground: 0 0% 98%;
+        --sidebar-primary: 0 0% 98%;
+        --sidebar-primary-foreground: 0 0% 9%;
+        --sidebar-accent: 0 0% 14.9%;
+        --sidebar-accent-foreground: 0 0% 98%;
+        --sidebar-border: 0 0% 14.9%;
+        --sidebar-ring: 0 0% 83.1%;
+        --sidebar-tab: 0 0% 20.5%;
+        --sidebar-tab-foreground: 0 0% 98%;
+        /* Modern status colors for dark mode */
+        --status-available: 142 84% 65%;
+        --status-available-bg: 142 84% 8%;
+        --status-in-use: 0 0% 98%;
+        --status-in-use-bg: 0 0% 14.9%;
+        --status-reserved: 48 96% 70%;
+        --status-reserved-bg: 48 96% 8%;
+        --status-maintenance: 0 84% 65%;
+        --status-maintenance-bg: 0 84% 8%;
+        /* Enhanced shadows for dark mode */
+        --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground font-sans antialiased;
+    }
+    /* Enhanced scrollbar styling for modern look */
+     ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+     ::-webkit-scrollbar-track {
+        background: hsl(var(--muted));
+        border-radius: 3px;
+    }
+     ::-webkit-scrollbar-thumb {
+        background: hsl(var(--muted-foreground) / 0.3);
+        border-radius: 3px;
+    }
+     ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--muted-foreground) / 0.5);
+    }
+    /* Modern selection styling */
+     ::selection {
+        background: hsl(var(--primary) / 0.2);
+        color: hsl(var(--primary-foreground));
+    }
+}
+
+
+/* Enhanced animations for modern UX */
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-shimmer {
+    animation: shimmer 2s infinite;
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideIn {
+    animation: slideIn 0.3s ease-out;
+}
+
+
+/* Modern glass morphism effects */
+
+.glass {
+    background: hsl(var(--background) / 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--border) / 0.5);
+}
+
+.glass-card {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--border) / 0.5);
+}
+
+
+/* Enhanced focus styles */
+
+.focus-ring {
+    @apply outline-none;
+}
+
+.focus-ring:focus {
+    @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+
+/* Modern button hover effects */
+
+
+/* Modern sidebar tab effects */
+
+.sidebar-tab-modern {
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-tab-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.sidebar-tab-modern:hover::before {
+    left: 100%;
+}
+
+.sidebar-tab-active {
+    background: linear-gradient(135deg, hsl(var(--sidebar-tab)), hsl(var(--sidebar-tab) / 0.9));
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+
+/* Start of Selection */
+
+.btn-hover {
+    transition: all 0.2s ease;
+}
+
+.btn-hover:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+
+/* End of Selection */
+
+
+/* Enhanced card styles */
+
+
+/* Start of Selection */
+
+.modern-card {
+    background: hsl(var(--card) / 0.5);
+    backdrop-filter: blur(8px);
+    border: 1px solid hsl(var(--border) / 0.5);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.modern-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border-color: hsl(var(--border));
+}
+
+
+/* End of Selection */

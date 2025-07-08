@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { RentalRequestService } from '@/features/rental-requests/services/rental-requests'
 import { useNotify } from '@/features/shared'
+import { getSupabaseClient } from '@/features/shared/lib/supabaseClient'
+import { RentalRequest } from '@/features/shared/types/rental'
 
 interface DashboardFilters {
   userId: string | null
@@ -9,9 +12,9 @@ interface DashboardFilters {
 }
 
 interface DashboardData {
-  requests: any[]
-  fleet: any[]
-  stats: any
+  requests: RentalRequest[]
+  fleet: Record<string, unknown>[]
+  stats: Record<string, unknown>
 }
 
 export const useDashboardData = (setRealtimeStatus: (status: 'connected' | 'disconnected' | 'connecting') => void) => {
@@ -22,6 +25,7 @@ export const useDashboardData = (setRealtimeStatus: (status: 'connected' | 'disc
   const [filters, setFilters] = useState<DashboardFilters>({ userId: null, equipmentId: null, status: null })
   const notify = useNotify()
   const abortControllerRef = useRef<AbortController | null>(null)
+  const subscriptionRef = useRef<RealtimeChannel | null>(null)
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
     if (abortControllerRef.current) {
@@ -88,12 +92,16 @@ export const useDashboardData = (setRealtimeStatus: (status: 'connected' | 'disc
       if (isManualRefresh) {
         notify.success('Data refreshed successfully')
       }
-    } catch (err: any) {
+    } catch (err) {
       if (abortControllerRef.current?.signal.aborted) return
+      let message = 'Failed to fetch data';
+      if (err instanceof Error) {
+        message = err.message;
+      }
       
       console.error('Error fetching dashboard data:', err)
-      setError(err.message || 'Failed to fetch data')
-      notify.error(err.message || 'Failed to fetch data')
+      setError(message)
+      notify.error(message)
     } finally {
       if (!abortControllerRef.current?.signal.aborted) {
         setLoading(false)
@@ -121,7 +129,45 @@ export const useDashboardData = (setRealtimeStatus: (status: 'connected' | 'disc
         abortControllerRef.current.abort()
       }
     }
-  }, [filters])
+  }, [filters, fetchData])
+
+  // --- REALTIME SUBSCRIPTION LOGIC ---
+  useEffect(() => {
+    const supabase = getSupabaseClient()
+    setRealtimeStatus('connecting')
+
+    // Create a channel for dashboard real-time updates
+    const channel = supabase
+      .channel('dashboard-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rental_requests' },
+        () => {
+          fetchData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fleet' },
+        () => {
+          fetchData()
+        }
+      )
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') setRealtimeStatus('connected')
+        else if (status === 'CLOSED') setRealtimeStatus('disconnected')
+      })
+
+    subscriptionRef.current = channel
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current)
+        setRealtimeStatus('disconnected')
+      }
+    }
+  }, [fetchData, setRealtimeStatus])
+  // --- END REALTIME SUBSCRIPTION LOGIC ---
 
   return {
     data,

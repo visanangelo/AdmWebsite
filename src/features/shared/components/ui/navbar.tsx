@@ -2,28 +2,18 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
-import { Button } from '@/features/shared/components/ui/button'
-import { Menu, X, Phone, Globe, LogIn, LogOut, User } from "lucide-react"
-import { cn } from '@/features/shared/lib/utils'
+import { Button } from '@/features/shared'
+import { X, Phone, Globe, LogIn, LogOut, User } from "lucide-react"
+import { cn } from '@/features/shared'
 import { useLanguage } from "@/contexts/language-context"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/features/shared/hooks/use-auth"
-import { Suspense } from "react"
-import { Metadata } from "next"
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
 
-const navigation = [
-  { name: "Home", href: "/" },
-  { name: "Services", href: "#services" },
-  { name: "Projects", href: "#projects" },
-  { name: "About", href: "#about" },
-  { name: "Contact", href: "#contact" },
-]
-
 // Debounce function for scroll events
-function debounce<T extends (...args: any[]) => any>(
+function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -39,19 +29,17 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { t, language, setLanguage } = useLanguage()
   const router = useRouter()
-  const { user, loading, signOut, isAdmin, isAuthenticated } = useAuth()
+  const { loading, signOut, isAdmin, isAuthenticated } = useAuth()
 
-  // Memoized scroll handler with debouncing
-  const handleScroll = useCallback(
-    debounce(() => {
-      setIsScrolled(window.scrollY > 0)
-    }, 10),
-    []
-  )
+  // Stable scroll handler
+  const handleScroll = useCallback(() => {
+    setIsScrolled(window.scrollY > 0)
+  }, [])
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
+    const debounced = debounce(handleScroll, 10)
+    window.addEventListener("scroll", debounced, { passive: true })
+    return () => window.removeEventListener("scroll", debounced)
   }, [handleScroll])
 
   // Prevent body scroll when mobile menu is open

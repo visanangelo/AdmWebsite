@@ -3,19 +3,17 @@
 import * as React from "react"
 import {
   ColumnDef,
-  ColumnFiltersState,
   Row as TanstackRow,
   SortingState,
   VisibilityState,
   flexRender,
   getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
   getPaginationRowModel,
   useReactTable,
   Row,
+  Column,
 } from "@tanstack/react-table"
 import {
   MoreVerticalIcon,
@@ -32,7 +30,6 @@ import {
   EyeIcon,
   RotateCcwIcon,
   BanIcon,
-  ClockIcon,
   AlertCircleIcon,
   DownloadIcon,
   RefreshCwIcon,
@@ -41,63 +38,14 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
-  MoreHorizontal,
 } from "lucide-react"
 import { toast } from "sonner"
-import { useState, useEffect, useCallback, useMemo } from "react"
-import { cn } from "@/features/shared"
-
-import { Badge } from "@/features/shared/components/ui/badge"
-import { Button } from "@/features/shared/components/ui/button"
-import { Checkbox } from "@/features/shared/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-} from "@/features/shared/components/ui/dropdown-menu"
-import { Input } from "@/features/shared/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/features/shared/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/features/shared/components/ui/table"
-import { Label } from "@/features/shared/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/features/shared/components/ui/dialog"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/features/shared/components/ui/tooltip"
-import { Skeleton } from "@/features/shared/components/ui/skeleton"
+import { useState, useCallback, useMemo } from "react"
+import { Badge, Button, Checkbox, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Label } from '@/features/shared';
 import { ActionButtons } from './ActionButtons'
-import { RentalRequest, FleetItem } from '@/features/shared'
-import { useIsMobile } from '@/features/shared'
 
 // Rename local Row interface to RentalRow
-interface RentalRow {
+export interface RentalRow {
   id: string
   date: string
   requester: string
@@ -107,7 +55,7 @@ interface RentalRow {
   start_date?: string
   end_date?: string
   project_location?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // interface DataTableProps
@@ -116,7 +64,7 @@ interface DataTableProps {
   onApprove?: (id: string) => Promise<void>
   onDecline?: (id: string) => Promise<void>
   onDelete?: (id: string) => Promise<void>
-  onEdit?: (id: string, updatedFields: any) => Promise<void>
+  onEdit?: (id: string, updatedFields: Record<string, unknown>) => Promise<void>
   onComplete?: (id: string) => Promise<void>
   onReopen?: (id: string) => Promise<void>
   onReminder?: (id: string) => Promise<void>
@@ -128,28 +76,12 @@ interface DataTableProps {
   onRefresh?: () => Promise<void>
   onExport?: (data: RentalRow[]) => void
   loading?: boolean
-  error?: string
   actionLoadingId?: string | null | undefined
   pageSize?: number
   enablePagination?: boolean
   enableColumnVisibility?: boolean
   enableBulkActions?: boolean
-  onFilterByUser?: (userId: string) => Promise<void>
-  onFilterByEquipment?: (equipmentId: string) => Promise<void>
   onClearIndexedFilters?: () => Promise<void>
-}
-
-// Loading skeleton for table rows
-function TableRowSkeleton({ columns }: { columns: number }) {
-  return (
-    <TableRow>
-      {Array.from({ length: columns }).map((_, index) => (
-        <TableCell key={index}>
-          <Skeleton className="h-4 w-full" />
-        </TableCell>
-      ))}
-    </TableRow>
-  )
 }
 
 // Bulk Actions Component
@@ -175,7 +107,7 @@ function BulkActions({
       await action(selectedRows)
       toast.success(`Bulk action completed for ${selectedRows.length} items`)
       onClearSelection()
-    } catch (error) {
+    } catch {
       toast.error('Bulk action failed')
     } finally {
       setIsLoading(false)
@@ -252,175 +184,128 @@ function MobileCardView({
   onViewDetails?: (id: string) => Promise<void>
 }) {
   return (
-    <div className="space-y-3 md:hidden">
+    <div className="space-y-4 md:hidden">
       {data.map((row) => {
         const isLoading = actionLoadingId === row.id;
-        
         return (
-          <div key={row.id} className="bg-card rounded-lg border p-4 space-y-3">
+          <div key={row.id} className="bg-card rounded-xl border border-gray-200 shadow-sm p-5 mb-4 flex flex-col gap-4">
             {/* Header with ID and Status */}
             <div className="flex items-center justify-between">
-              <span className="font-mono text-sm font-medium text-muted-foreground">#{row.id}</span>
-              <Badge variant={getStatusVariant(row.status)} className="text-xs">
+              <span className="font-mono text-xs font-medium text-muted-foreground">#{row.id}</span>
+              <Badge variant={getStatusVariant(row.status)} className="text-xs font-semibold px-3 py-1 rounded-full">
                 {row.status}
               </Badge>
             </div>
-            
             {/* Main Info */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Requester:</span>
-                <span className="text-sm">{row.requester}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Equipment:</span>
-                <span className="text-sm">{row.equipment}</span>
-              </div>
-              {row.start_date && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Start:</span>
-                  <span className="text-sm">{new Date(row.start_date).toLocaleDateString()}</span>
-                </div>
-              )}
-              {row.end_date && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">End:</span>
-                  <span className="text-sm">{new Date(row.end_date).toLocaleDateString()}</span>
-                </div>
-              )}
-              {row.project_location && (
-                <div className="flex items-start gap-2">
-                  <span className="text-sm font-medium">Location:</span>
-                  <span className="text-sm text-muted-foreground">{row.project_location}</span>
-                </div>
-              )}
-              {row.notes && (
-                <div className="flex items-start gap-2">
-                  <span className="text-sm font-medium">Notes:</span>
-                  <span className="text-sm text-muted-foreground line-clamp-2">{row.notes}</span>
-                </div>
-              )}
+            <div className="space-y-1 text-sm">
+              <div><span className="font-medium">Requester:</span> {row.requester}</div>
+              <div><span className="font-medium">Equipment:</span> {row.equipment}</div>
+              {row.start_date && <div><span className="font-medium">Start:</span> {new Date(row.start_date).toLocaleDateString()}</div>}
+              {row.end_date && <div><span className="font-medium">End:</span> {new Date(row.end_date).toLocaleDateString()}</div>}
+              {row.project_location && <div><span className="font-medium">Location:</span> <span className="text-muted-foreground">{row.project_location}</span></div>}
+              {row.notes && <div><span className="font-medium">Notes:</span> <span className="text-muted-foreground line-clamp-2">{row.notes}</span></div>}
             </div>
-            
+            {/* Divider */}
+            <div className="border-t my-2" />
             {/* Quick Action Buttons */}
-            <div className="flex flex-wrap gap-2 pt-2 border-t">
-              {/* Primary Actions based on status */}
+            <div className="flex flex-col gap-2">
               {row.status === 'Pending' && (
                 <>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="default"
                     onClick={() => onAction('Approve', row.id)}
                     disabled={isLoading}
-                    className="flex-1 h-9 bg-green-50 hover:bg-green-100 border-green-200 text-green-800"
+                    className="w-full h-10 font-semibold bg-green-600 text-white hover:bg-green-700"
                   >
-                    <CheckCircleIcon className="h-4 w-4 mr-1" />
-                    Approve
+                    <CheckCircleIcon className="h-4 w-4 mr-2" /> Approve
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="default"
                     onClick={() => onAction('Decline', row.id)}
                     disabled={isLoading}
-                    className="flex-1 h-9 bg-red-50 hover:bg-red-100 border-red-200 text-red-800"
+                    className="w-full h-10 font-semibold bg-red-500 text-white hover:bg-red-600"
                   >
-                    <XCircleIcon className="h-4 w-4 mr-1" />
-                    Decline
+                    <XCircleIcon className="h-4 w-4 mr-2" /> Decline
                   </Button>
                 </>
               )}
-              
               {row.status === 'Approved' && (
                 <>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="default"
                     onClick={() => onAction('Complete', row.id)}
                     disabled={isLoading}
-                    className="flex-1 h-9 bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800"
+                    className="w-full h-10 font-semibold bg-blue-600 text-white hover:bg-blue-700"
                   >
-                    <CheckCircleIcon className="h-4 w-4 mr-1" />
-                    Complete
+                    <CheckCircleIcon className="h-4 w-4 mr-2" /> Complete
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="default"
                     onClick={() => onAction('Cancel', row.id)}
                     disabled={isLoading}
-                    className="flex-1 h-9 bg-red-50 hover:bg-red-100 border-red-200 text-red-800"
+                    className="w-full h-10 font-semibold bg-red-500 text-white hover:bg-red-600"
                   >
-                    <BanIcon className="h-4 w-4 mr-1" />
-                    Cancel
+                    <BanIcon className="h-4 w-4 mr-2" /> Cancel
                   </Button>
                 </>
               )}
-              
               {(row.status === 'Completed' || row.status === 'Cancelled' || row.status === 'Declined') && (
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="default"
                   onClick={() => onAction('Reopen', row.id)}
                   disabled={isLoading}
-                  className="flex-1 h-9 bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-800"
+                  className="w-full h-10 font-semibold bg-orange-400 text-white hover:bg-orange-500"
                 >
-                  <RotateCcwIcon className="h-4 w-4 mr-1" />
-                  Reopen
+                  <RotateCcwIcon className="h-4 w-4 mr-2" /> Reopen
                 </Button>
               )}
-              
-              {/* View Details Button */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onViewDetails?.(row.id)}
-                className="flex-1 h-9"
+                className="w-full h-10 font-semibold border-gray-300"
               >
-                <EyeIcon className="h-4 w-4 mr-1" />
-                View
+                <EyeIcon className="h-4 w-4 mr-2" /> View
               </Button>
             </div>
-            
-            {/* Secondary Actions Dropdown */}
+            {/* Divider */}
+            <div className="border-t my-2" />
+            {/* More Actions Dropdown */}
             <div className="flex justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 w-full">
-                    <MoreVerticalIcon className="h-4 w-4 mr-2" />
-                    More Actions
+                  <Button variant="outline" size="sm" className="w-full h-10 rounded-lg bg-gray-50 hover:bg-gray-100 border-gray-200">
+                    <MoreVerticalIcon className="h-4 w-4 mr-2" /> More Actions
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-56 bg-white shadow-lg rounded-xl">
                   <DropdownMenuItem onClick={() => onViewDetails?.(row.id)}>
-                    <EyeIcon className="mr-2 h-4 w-4" />
-                    View Details
+                    <EyeIcon className="mr-2 h-4 w-4" /> View Details
                   </DropdownMenuItem>
-                  
                   <DropdownMenuItem onClick={() => onAction('Edit', row.id)}>
-                    <EditIcon className="mr-2 h-4 w-4" />
-                    Edit Request
+                    <EditIcon className="mr-2 h-4 w-4" /> Edit Request
                   </DropdownMenuItem>
-                  
                   <DropdownMenuItem onClick={() => onAction('Reminder', row.id)}>
-                    <AlertCircleIcon className="mr-2 h-4 w-4" />
-                    Send Reminder
+                    <AlertCircleIcon className="mr-2 h-4 w-4" /> Send Reminder
                   </DropdownMenuItem>
-                  
                   <DropdownMenuSeparator />
-                  
                   <DropdownMenuItem 
                     onClick={() => onAction('Delete', row.id)}
                     className="bg-red-100 text-red-800 focus:bg-red-200 focus:text-red-800"
                   >
-                    <Trash2Icon className="mr-2 h-4 w-4" />
-                    Delete Request
+                    <Trash2Icon className="mr-2 h-4 w-4" /> Delete Request
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            
             {/* Loading Indicator */}
             {isLoading && (
-              <div className="flex items-center justify-center gap-2 p-2 bg-blue-50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 p-2 bg-blue-50 rounded-lg mt-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
                 <span className="text-sm text-blue-700">Processing...</span>
               </div>
@@ -439,36 +324,27 @@ function DataTableToolbar({
   onExport,
   data,
   enableColumnVisibility,
-  columnFilters,
-  setColumnFilters,
   dateFrom,
   setDateFrom,
   dateTo,
   setDateTo,
   globalFilter,
   setGlobalFilter,
-  onFilterByUser,
-  onFilterByEquipment,
   onClearIndexedFilters,
 }: {
-  table: any
+  table: ReturnType<typeof useReactTable<RentalRow>>
   onRefresh?: () => Promise<void>
   onExport?: (data: RentalRow[]) => void
   data: RentalRow[]
   enableColumnVisibility: boolean
-  columnFilters: any[]
-  setColumnFilters: (filters: any[]) => void
   dateFrom: string
   setDateFrom: (date: string) => void
   dateTo: string
   setDateTo: (date: string) => void
   globalFilter: string
   setGlobalFilter: (filter: string) => void
-  onFilterByUser?: (userId: string) => Promise<void>
-  onFilterByEquipment?: (equipmentId: string) => Promise<void>
   onClearIndexedFilters?: () => Promise<void>
 }) {
-  const isMobile = useIsMobile()
   const [showFilters, setShowFilters] = useState(false)
 
   return (
@@ -483,23 +359,21 @@ function DataTableToolbar({
             <Input
               placeholder="Search requests..."
               value={globalFilter ?? ""}
-              onChange={(event) => setGlobalFilter(event.target.value)}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setGlobalFilter(event.target.value)}
               className="pl-10 h-10 md:h-9"
             />
           </div>
           
           {/* Mobile Filter Toggle */}
-          {isMobile && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className="h-10 md:h-9"
-            >
-              <FilterIcon className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="h-10 md:h-9"
+          >
+            <FilterIcon className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
         </div>
         
         {/* Actions */}
@@ -538,14 +412,14 @@ function DataTableToolbar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {table.getAllColumns()
-                  .filter((column: any) => column.getCanHide())
-                  .map((column: any) => {
+                  .filter((column: Column<RentalRow, unknown>) => column.getCanHide())
+                  .map((column: Column<RentalRow, unknown>) => {
                     return (
                       <DropdownMenuCheckboxItem
                         key={column.id}
                         className="capitalize"
                         checked={column.getIsVisible()}
-                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                        onCheckedChange={(value: boolean | 'indeterminate') => column.toggleVisibility(!!value)}
                       >
                         {column.id}
                       </DropdownMenuCheckboxItem>
@@ -558,105 +432,103 @@ function DataTableToolbar({
       </div>
       
       {/* Mobile Filters Panel */}
-      {isMobile && showFilters && (
-        <div className="bg-muted/50 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium">From Date</Label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs font-medium">To Date</Label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
-          </div>
-          
-          {onClearIndexedFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClearIndexedFilters}
-              className="w-full h-9"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Clear Filters
-            </Button>
-          )}
-        </div>
-      )}
-      
-      {/* Desktop Filters */}
-      {!isMobile && (
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium">From:</Label>
+      <div className="bg-muted/50 rounded-lg p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs font-medium">From Date</Label>
             <Input
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="h-9 w-40"
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
+              className="h-9 text-sm"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium">To:</Label>
+          <div>
+            <Label className="text-xs font-medium">To Date</Label>
             <Input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="h-9 w-40"
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
+              className="h-9 text-sm"
             />
           </div>
-          {onClearIndexedFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClearIndexedFilters}
-              className="h-9"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Clear Filters
-            </Button>
-          )}
         </div>
-      )}
+        
+        {onClearIndexedFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearIndexedFilters}
+            className="w-full h-9"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear Filters
+          </Button>
+        )}
+      </div>
+      
+      {/* Desktop Filters */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Label className="text-sm font-medium">From:</Label>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
+            className="h-9 w-40"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-sm font-medium">To:</Label>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
+            className="h-9 w-40"
+          />
+        </div>
+        {onClearIndexedFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearIndexedFilters}
+            className="h-9"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear Filters
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
 
-// Helper function for status variants
+// Helper function for status variants - using modern status colors
 function getStatusVariant(status: string) {
   switch (status) {
-    case 'Pending': return 'yellow'
-    case 'Approved': return 'default'
-    case 'Declined': return 'destructive'
-    case 'Completed': return 'green'
+    case 'Pending': return 'reserved'
+    case 'Approved': return 'in-use' 
+    case 'Declined': return 'maintenance'
+    case 'Completed': return 'available'
     case 'Cancelled': return 'outline'
     default: return 'outline'
   }
 }
 
 // Sortable header component
-function SortableHeader({ column, children }: { column: any; children: React.ReactNode }) {
+function SortableHeader({ column, children }: { column: Column<RentalRow, unknown>; children: React.ReactNode }) {
+  // getIsSorted can return boolean or 'asc' | 'desc', so handle both
+  const sorted = column.getIsSorted();
   return (
     <Button
       variant="ghost"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      onClick={() => column.toggleSorting(sorted === "asc")}
       className="h-8 px-2 font-normal"
     >
       {children}
-      {column.getIsSorted() === "asc" ? (
+      {sorted === "asc" ? (
         <ChevronUpIcon className="ml-2 h-4 w-4" />
-      ) : column.getIsSorted() === "desc" ? (
+      ) : sorted === "desc" ? (
         <ChevronDownIcon className="ml-2 h-4 w-4" />
       ) : (
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -666,9 +538,8 @@ function SortableHeader({ column, children }: { column: any; children: React.Rea
 }
 
 // Pagination Component
-function DataTablePagination({ table, pagination, setPagination }: { table: any, pagination: { pageIndex: number, pageSize: number }, setPagination: (p: { pageIndex: number, pageSize: number }) => void }) {
+function DataTablePagination({ table, pagination, setPagination }: { table: ReturnType<typeof useReactTable<RentalRow>>, pagination: { pageIndex: number, pageSize: number }, setPagination: (p: { pageIndex: number, pageSize: number }) => void }) {
   const [open, setOpen] = React.useState(false);
-  const isMobile = useIsMobile();
   
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-2 py-4">
@@ -682,7 +553,7 @@ function DataTablePagination({ table, pagination, setPagination }: { table: any,
             open={open}
             onOpenChange={setOpen}
             value={`${pagination.pageSize}`}
-            onValueChange={(value) => {
+            onValueChange={(value: string) => {
               setPagination({ ...pagination, pageSize: Number(value), pageIndex: 0 });
               setOpen(false);
             }}
@@ -748,7 +619,7 @@ function DataTablePagination({ table, pagination, setPagination }: { table: any,
 // Quick Action Buttons Component - Memoized for better performance
 const QuickActions = React.memo(({ row, onAction, actionLoadingId }: { 
   row: RentalRow; 
-  onAction: (action: string, id: string) => void;
+  onAction: (action: string, id: string) => Promise<void>;
   actionLoadingId: string | null | undefined;
 }) => {
   const { status, id } = row
@@ -802,8 +673,8 @@ const QuickActions = React.memo(({ row, onAction, actionLoadingId }: {
 
 QuickActions.displayName = 'QuickActions'
 
-// Remove globalStringFilterFn, only keep globalFuzzyFilterFn with types:
-function globalFuzzyFilterFn(row: Row<any>, columnId: string, filterValue: string) {
+// Find the globalFuzzyFilterFn function and ensure the parameter types are explicit:
+function globalFuzzyFilterFn(row: Row<RentalRow>, columnId: string, filterValue: string): boolean {
   // Search across all visible string columns
   const values = Object.values(row.original)
     .filter(v => typeof v === 'string')
@@ -828,39 +699,20 @@ export function DataTable({
   onRefresh,
   onExport,
   loading,
-  error,
   actionLoadingId,
-  pageSize: propPageSize = 10,
+  // pageSize = 10,
   enablePagination = true,
   enableColumnVisibility = true,
   enableBulkActions = true,
-  onFilterByUser,
-  onFilterByEquipment,
   onClearIndexedFilters,
 }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState("")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [pagination, setPagination] = useState(() => ({ pageIndex: 0, pageSize: 10 }))
-
-  // Memoized action handler to prevent unnecessary re-renders
-  const handleAction = useCallback(async (
-    action: (id: string, ...args: any[]) => Promise<void>,
-    id: string,
-    actionName: string,
-    ...args: any[]
-  ) => {
-    try {
-      await action(id, ...args)
-      // Do not show toast here; let parent handler show notifications
-    } catch (err) {
-      // Do not show toast here; let parent handler show notifications
-    }
-  }, [])
 
   const handleViewDetails = useCallback(async (id: string) => {
     if (onViewDetails) {
@@ -879,27 +731,27 @@ export function DataTable({
         break
       case 'Approve':
         if (onApprove) {
-          await handleAction(onApprove, id, "Approve")
+          await onApprove(id)
         }
         break
       case 'Decline':
         if (onDecline) {
-          await handleAction(onDecline, id, "Decline")
+          await onDecline(id)
         }
         break
       case 'Complete':
         if (onComplete) {
-          await handleAction(onComplete, id, "Complete")
+          await onComplete(id)
         }
         break
       case 'Reopen':
         if (onReopen) {
-          await handleAction(onReopen, id, "Reopen")
+          await onReopen(id)
         }
         break
       case 'Cancel':
         if (onCancel) {
-          await handleAction(onCancel, id, "Cancel")
+          await onCancel(id)
         }
         break
       case 'Edit':
@@ -909,13 +761,13 @@ export function DataTable({
         break
       case 'Reminder':
         if (onReminder) {
-          await handleAction(onReminder, id, "Reminder")
+          await onReminder(id)
         }
         break
       default:
         console.warn(`Unknown action: ${action}`)
     }
-  }, [data, onApprove, onDecline, onComplete, onReopen, onCancel, onEdit, onReminder, handleAction, handleViewDetails])
+  }, [data, onApprove, onDecline, onComplete, onReopen, onCancel, onEdit, onReminder, handleViewDetails])
 
   const handleClearSelection = useCallback(() => {
     setRowSelection({})
@@ -1006,12 +858,12 @@ export function DataTable({
       header: ({ column }) => <SortableHeader column={column}>Status</SortableHeader>,
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => {
         const status = row.getValue("status") as string;
-        let variant: any = 'outline';
+        let variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'reserved' | 'in-use' | 'maintenance' | 'available' | undefined = 'outline';
         let extraClass = '';
-        if (status === 'Pending') variant = 'yellow';
-        else if (status === 'Approved') variant = 'default';
-        else if (status === 'Declined') variant = 'destructive';
-        else if (status === 'Completed') variant = 'green';
+        if (status === 'Pending') variant = 'reserved';
+        else if (status === 'Approved') variant = 'in-use';
+        else if (status === 'Declined') variant = 'maintenance';
+        else if (status === 'Completed') variant = 'available';
         else if (status === 'Cancelled') {
           variant = 'outline';
           extraClass = 'text-red-400 border-red-200 bg-red-50';
@@ -1044,7 +896,7 @@ export function DataTable({
       id: "actions",
       header: "Actions",
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => {
-        const status = row.original.status
+        // status is not used, so remove this line to fix the lint error.
 
         return (
           <div className="flex items-center gap-1">
@@ -1068,14 +920,14 @@ export function DataTable({
                   </DropdownMenuItem>
                   
                   {onEdit && (
-                    <DropdownMenuItem onClick={() => handleAction(onEdit, row.original.id, "Edit")}>
+                    <DropdownMenuItem onClick={() => handleQuickAction('Edit', row.original.id)}>
                       <EditIcon className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
                   )}
                   
                   {onReminder && (
-                    <DropdownMenuItem onClick={() => handleAction(onReminder, row.original.id, "Send Reminder")}>
+                    <DropdownMenuItem onClick={() => handleQuickAction('Reminder', row.original.id)}>
                       <AlertCircleIcon className="mr-2 h-4 w-4" />
                       Send Reminder
                     </DropdownMenuItem>
@@ -1085,7 +937,7 @@ export function DataTable({
                   
                   {onDelete && (
                     <DropdownMenuItem 
-                      onClick={() => handleAction(onDelete, row.original.id, "Delete")}
+                      onClick={() => handleQuickAction('Delete', row.original.id)}
                       className="bg-red-100 text-red-800 focus:bg-red-200 focus:text-red-800"
                     >
                       <Trash2Icon className="mr-2 h-4 w-4" />
@@ -1102,7 +954,7 @@ export function DataTable({
       enableHiding: false,
       size: 100,
     },
-  ], [handleQuickAction, handleViewDetails, handleAction, onEdit, onReminder, onDelete, actionLoadingId])
+  ], [handleQuickAction, handleViewDetails, onEdit, onReminder, onDelete, actionLoadingId])
 
   // Memoized table configuration for better performance
   const tableConfig = useMemo(() => ({
@@ -1110,7 +962,6 @@ export function DataTable({
     columns,
     state: {
       sorting,
-      columnFilters,
       columnVisibility,
       rowSelection,
       globalFilter,
@@ -1118,7 +969,6 @@ export function DataTable({
     },
     enableRowSelection: enableBulkActions,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
@@ -1129,7 +979,7 @@ export function DataTable({
     getPaginationRowModel: getPaginationRowModel(),
     globalFilterFn: globalFuzzyFilterFn,
   }), [
-    data, columns, sorting, columnFilters, columnVisibility, rowSelection, 
+    data, columns, sorting, columnVisibility, rowSelection, 
     globalFilter, pagination, enableBulkActions
   ])
 
@@ -1147,24 +997,6 @@ export function DataTable({
     )
   }
 
-  // Enhanced error state
-  if (error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center space-y-4">
-          <div className="text-destructive text-lg font-semibold">Error Loading Data</div>
-          <p className="text-muted-foreground">{error}</p>
-          {onRefresh && (
-            <Button onClick={onRefresh} variant="outline" className="gap-2">
-              <RefreshCwIcon className="h-4 w-4" />
-              Try Again
-            </Button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
       <DataTableToolbar 
@@ -1173,16 +1005,12 @@ export function DataTable({
         onExport={onExport}
         data={data}
         enableColumnVisibility={enableColumnVisibility}
-        columnFilters={columnFilters}
-        setColumnFilters={setColumnFilters}
         dateFrom={dateFrom}
-        setDateFrom={setDateFrom}
+        setDateFrom={(value: string) => setDateFrom(value)}
         dateTo={dateTo}
-        setDateTo={setDateTo}
+        setDateTo={(value: string) => setDateTo(value)}
         globalFilter={globalFilter}
-        setGlobalFilter={setGlobalFilter}
-        onFilterByUser={onFilterByUser}
-        onFilterByEquipment={onFilterByEquipment}
+        setGlobalFilter={(value: string) => setGlobalFilter(value)}
         onClearIndexedFilters={onClearIndexedFilters}
       />
       
@@ -1272,12 +1100,14 @@ export function DataTable({
       </div>
 
       {/* Mobile Card View */}
-      <MobileCardView 
-        data={table.getPaginationRowModel().rows.map(row => row.original)}
-        onAction={handleQuickAction}
-        actionLoadingId={actionLoadingId}
-        onViewDetails={handleViewDetails}
-      />
+      <div className="md:hidden">
+        <MobileCardView 
+          data={table.getPaginationRowModel().rows.map(row => row.original)}
+          onAction={handleQuickAction}
+          actionLoadingId={actionLoadingId}
+          onViewDetails={handleViewDetails}
+        />
+      </div>
 
       {/* Page summary */}
       {enablePagination && (

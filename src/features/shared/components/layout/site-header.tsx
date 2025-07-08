@@ -1,7 +1,6 @@
 import { Separator } from "@/features/shared/components/ui/separator"
 import { SidebarTrigger } from "@/features/shared/components/ui/sidebar"
-import { Badge } from "@/features/shared/components/ui/badge"
-import { Wifi, WifiOff, Loader2 } from "lucide-react"
+import { ModeToggle } from "@/features/shared/components/ui/mode-toggle"
 
 export function SiteHeader() {
   return (
@@ -12,7 +11,8 @@ export function SiteHeader() {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
-        <h1 className="text-base font-medium">Rental Management</h1>
+        <h1 className="text-base font-medium flex-1">Rental Management</h1>
+        <ModeToggle />
       </div>
     </header>
   )

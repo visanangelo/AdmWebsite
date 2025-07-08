@@ -1,7 +1,7 @@
 "use client"
 import * as React from "react"
 import * as RadixSwitch from "@radix-ui/react-switch"
-import { cn } from '@/features/shared/lib/utils'
+import { cn } from '@/features/shared'
 
 export interface SwitchProps extends React.ComponentPropsWithoutRef<typeof RadixSwitch.Root> {
   checked?: boolean

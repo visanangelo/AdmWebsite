@@ -7,7 +7,7 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-serve(async (_req: any) => {
+serve(async (_req: unknown) => {
   const { data: fleet } = await supabase.from("fleet").select("*");
   const { data: requests } = await supabase.from("rental_requests").select("*");
   // Revert to real current date
@@ -25,15 +25,15 @@ serve(async (_req: any) => {
     if (vehicle.status === "Maintenance") continue;
 
     // 2. Only consider approved rentals for this vehicle
-    const approvedRentals = (requests || []).filter((r: any) =>
+    const approvedRentals = (requests || []).filter((r: Record<string, unknown>) =>
       r.equipment_id === vehicle.id &&
       r.status === "Approved"
     );
 
     // 3. Check for 'In Use' (today is within any rental period)
-    const inUse = approvedRentals.some((r: any) => r.start_date <= today && r.end_date >= today);
+    const inUse = approvedRentals.some((r: Record<string, unknown>) => r.start_date <= today && r.end_date >= today);
     // 4. Check for 'Reserved' (future rental exists, but not today)
-    const reserved = !inUse && approvedRentals.some((r: any) => r.start_date > today);
+    const reserved = !inUse && approvedRentals.some((r: Record<string, unknown>) => r.start_date > today);
 
     let newStatus = "Available";
     if (inUse) {

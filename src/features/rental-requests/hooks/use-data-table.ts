@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 
 export interface DataTableConfig<T> {
-  fetchData: (page: number, pageSize: number, filters?: any) => Promise<{
+  fetchData: (page: number, pageSize: number, filters?: Record<string, unknown>) => Promise<{
     data: T[]
     total: number
     error?: string
   }>
-  onAction?: (action: string, id: string, data?: any) => Promise<void>
+  onAction?: (action: string, id: string, data?: Record<string, unknown>) => Promise<void>
   optimisticUpdate?: (action: string, id: string, currentData: T[]) => T[]
 }
 
@@ -15,7 +15,7 @@ interface CacheEntry<T> {
   data: T[]
   total: number
   timestamp: number
-  filters: any
+  filters: Record<string, unknown>
   stale: boolean
 }
 
@@ -25,7 +25,7 @@ export function useDataTable<T extends { id: string }>(config: DataTableConfig<T
   const [error, setError] = useState<string | null>(null)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 })
-  const [filters, setFilters] = useState<any>({})
+  const [filters, setFilters] = useState<Record<string, unknown>>({})
   
   const loadingRef = useRef(false)
   const cacheRef = useRef<Map<string, CacheEntry<T>>>(new Map())
@@ -36,7 +36,7 @@ export function useDataTable<T extends { id: string }>(config: DataTableConfig<T
   const BACKGROUND_REFRESH_DURATION = 45000 // 45 seconds
 
   // Generate cache key
-  const getCacheKey = useCallback((page: number, pageSize: number, filters: any) => {
+  const getCacheKey = useCallback((page: number, pageSize: number, filters: Record<string, unknown>) => {
     return `${page}-${pageSize}-${JSON.stringify(filters)}`
   }, [])
 
@@ -164,7 +164,7 @@ export function useDataTable<T extends { id: string }>(config: DataTableConfig<T
   const handleAction = useCallback(async (
     action: string,
     id: string,
-    optimisticData?: any
+    optimisticData?: Record<string, unknown>
   ) => {
     if (!config.onAction) return
 
@@ -196,7 +196,7 @@ export function useDataTable<T extends { id: string }>(config: DataTableConfig<T
     }
   }, [config, markCacheStale, fetchData])
 
-  const updateFilters = useCallback((newFilters: any) => {
+  const updateFilters = useCallback((newFilters: Record<string, unknown>) => {
     setFilters(newFilters)
     setPagination(prev => ({ ...prev, page: 1 })) // Reset to first page
   }, [])

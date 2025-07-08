@@ -1,6 +1,16 @@
-// Dashboard components
+// Components
 export { DashboardCard, DashboardCardSkeleton } from './components/DashboardCard'
 export { FleetCard, FleetCardSkeleton } from './components/FleetCard'
+export { ActionLoadingOverlay } from './components/ActionLoadingOverlay'
+export { DataTableSkeleton } from './components/DataTableSkeleton'
+export { DashboardContent } from './components/DashboardContent'
 
-// Dashboard hooks
-export { useDashboardData } from './hooks/use-dashboard-data' 
+// Context
+export { DashboardProvider, useDashboard } from './context/DashboardProvider'
+
+// Hooks
+export { useDataFetching } from './hooks/useDataFetching'
+export { useDashboardActions } from './hooks/useDashboardActions'
+
+// Types
+export type { DashboardStats, AuditLogEntry, DashboardState, DeleteDialogState } from './types' 
