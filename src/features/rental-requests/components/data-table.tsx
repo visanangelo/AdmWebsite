@@ -80,6 +80,7 @@ interface DataTableProps {
   enableColumnVisibility?: boolean
   enableBulkActions?: boolean
   onClearIndexedFilters?: () => Promise<void>
+  highlightedRequestId?: string | null
 }
 
 // Elimină complet funcțiile DataTableToolbar, DataTablePagination, SortableHeader, globalFuzzyFilterFn din acest fișier (păstrează doar importurile)
@@ -166,6 +167,7 @@ export function DataTable({
   enableColumnVisibility = true,
   enableBulkActions = true,
   onClearIndexedFilters,
+  highlightedRequestId,
 }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -585,30 +587,41 @@ export function DataTable({
             </TableHeader>
             <TableBody>
               {table.getPaginationRowModel().rows?.length ? (
-                table.getPaginationRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                    className="hover:bg-muted/50 transition-colors"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell 
-                        key={cell.id} 
-                        style={{ 
-                          width: cell.column.getSize(),
-                          minWidth: cell.column.getSize(),
-                          maxWidth: cell.column.getSize()
-                        }} 
-                        className="whitespace-nowrap text-sm px-3 py-3"
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                table.getPaginationRowModel().rows.map((row) => {
+                  const isHighlighted = highlightedRequestId === row.original.id;
+                  return (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                      className={`hover:bg-muted/50 transition-all duration-500 ${
+                        isHighlighted 
+                          ? 'animate-pulse bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-l-4 border-blue-500 shadow-lg' 
+                          : ''
+                      }`}
+                      style={{
+                        animationDelay: isHighlighted ? '0.5s' : '0s',
+                        animationDuration: isHighlighted ? '2s' : '0s',
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell 
+                          key={cell.id} 
+                          style={{ 
+                            width: cell.column.getSize(),
+                            minWidth: cell.column.getSize(),
+                            maxWidth: cell.column.getSize()
+                          }} 
+                          className="whitespace-nowrap text-sm px-3 py-3"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell
@@ -650,6 +663,7 @@ export function DataTable({
           onAction={handleQuickAction}
           actionLoadingId={actionLoadingId}
           onViewDetails={handleViewDetails}
+          highlightedRequestId={highlightedRequestId}
         />
       </div>
 

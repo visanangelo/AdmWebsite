@@ -28,11 +28,14 @@ export { default as BlurText } from './components/ui/blur-text'
 export { ModeToggle } from './components/ui/mode-toggle'
 export { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from './components/ui/sheet'
 export { toggleVariants } from './components/ui/toggle'
+export { NotificationDropdown } from './components/ui/notification-dropdown'
+export { ScrollArea } from './components/ui/scroll-area'
 
 // Shared hooks
 export { useAuth } from './hooks/use-auth'
 export { useNotify } from './hooks/useNotify'
 export { useIsMobile } from './hooks/use-mobile'
+export { useNotifications } from './hooks/useNotifications'
 
 // Shared utilities
 export { getSupabaseClient } from './lib/supabaseClient'

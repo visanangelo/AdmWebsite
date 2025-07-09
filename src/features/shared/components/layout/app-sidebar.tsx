@@ -8,14 +8,13 @@ import {
   SettingsIcon,
   UserIcon,
   HomeIcon,
-  BellIcon,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/features/shared/components/ui/sidebar"
 import { Avatar, AvatarFallback } from "@/features/shared/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/features/shared/components/ui/dropdown-menu"
-import { Badge } from "@/features/shared/components/ui/badge"
 import { useIsMobile, useAuth } from "@/features/shared"
+import { NotificationDropdown } from "@/features/shared/components/ui/notification-dropdown"
 
 const navMain = [
   {
@@ -168,15 +167,11 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: { activeTab?: s
         <SidebarFooter className="border-t border-border flex-shrink-0 bg-gradient-to-t from-card/80 to-transparent overflow-hidden">
           <div className="p-4 space-y-3">
             {/* Notifications */}
-            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-2">
-                <div className="relative">
-                  <BellIcon className="h-4 w-4 text-muted-foreground" />
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-pulse" />
-                </div>
+                <NotificationDropdown onTabChange={onTabChange} />
                 <span className="text-sm text-foreground">Notifications</span>
               </div>
-              <Badge className="bg-destructive/10 text-destructive text-xs">3</Badge>
             </div>
 
             {/* User Profile */}

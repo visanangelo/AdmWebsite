@@ -8,7 +8,6 @@ import {
   CheckCircle2, 
   Clock, 
   Wrench, 
-  Shield, 
   Eye, 
   Edit, 
   MoreHorizontal 
@@ -39,8 +38,6 @@ export const FleetCard: React.FC<FleetCardProps> = React.memo(({ eq, onStatusCha
         return <Clock className="w-4 h-4 text-blue-500" />
       case 'Maintenance':
         return <Wrench className="w-4 h-4 text-orange-500" />
-      case 'Reserved':
-        return <Shield className="w-4 h-4 text-purple-500" />
       default:
         return <Truck className="w-4 h-4 text-gray-500" />
     }
@@ -54,15 +51,13 @@ export const FleetCard: React.FC<FleetCardProps> = React.memo(({ eq, onStatusCha
         return 'bg-blue-50 text-blue-700 border-blue-200'
       case 'Maintenance':
         return 'bg-orange-50 text-orange-700 border-orange-200'
-      case 'Reserved':
-        return 'bg-purple-50 text-purple-700 border-purple-200'
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200'
     }
   }
 
   const getStatusActions = (currentStatus: string) => {
-    const allStatuses: FleetStatus[] = ['Available', 'In Use', 'Maintenance', 'Reserved']
+    const allStatuses: FleetStatus[] = ['Available', 'In Use', 'Maintenance']
     return allStatuses.filter(status => status !== currentStatus)
   }
 

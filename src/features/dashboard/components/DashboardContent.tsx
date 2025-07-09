@@ -19,6 +19,7 @@ interface DashboardContentProps {
   setDeleteDialog: (dialog: DeleteDialogState) => void
   auditLogLoaded: boolean
   fetchAuditLog: () => void
+  highlightedRequestId?: string | null
 }
 
 export const DashboardContent: React.FC<DashboardContentProps> = ({ 
@@ -27,7 +28,8 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
   deleteDialog, 
   setDeleteDialog, 
   auditLogLoaded, 
-  fetchAuditLog 
+  fetchAuditLog,
+  highlightedRequestId
 }) => {
   const {
     data: { requests, fleet },
@@ -168,6 +170,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
               // Clear any cached filters and refresh data
               await debouncedFetch(true)
             }}
+            highlightedRequestId={highlightedRequestId}
           />
         )
 
@@ -204,7 +207,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
     setDetailsId, handleDeleteWrapper, 
     handleDirectDeleteCancel, handleDirectDeleteConfirm, handleFleetStatusUpdate, lastFetch,
     autoRefreshEnabled, refreshInterval, setAutoRefreshEnabled, setRefreshInterval,
-    actionLoadingId
+    actionLoadingId, highlightedRequestId
   ])
 
   return (

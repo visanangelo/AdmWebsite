@@ -28,6 +28,7 @@ interface RequestsTabProps {
   onDirectDeleteCancel: () => void
   onSetDetailsId: (id: string | null) => void
   onClearIndexedFilters: () => Promise<void>
+  highlightedRequestId?: string | null
 }
 
 const RequestsTab: React.FC<RequestsTabProps> = ({
@@ -52,7 +53,8 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
   onDirectDeleteConfirm,
   onDirectDeleteCancel,
   onSetDetailsId,
-  onClearIndexedFilters
+  onClearIndexedFilters,
+  highlightedRequestId
 }) => {
   // Dynamic configuration
   const config = {
@@ -174,6 +176,7 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
               enableColumnVisibility={true}
               enableBulkActions={true}
               onClearIndexedFilters={onClearIndexedFilters}
+              highlightedRequestId={highlightedRequestId}
             />
           )}
         </CardContent>

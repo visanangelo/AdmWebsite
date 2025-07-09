@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { getSupabaseClient, useAuth } from "@/features/shared"
 import { RentalRequestService } from "@/features/rental-requests"
 import { DashboardProvider, DashboardContent } from "@/features/dashboard"
@@ -18,9 +18,30 @@ export default function Page() {
     row: null,
   });
   const [auditLogLoaded, setAuditLogLoaded] = useState(false);
+  const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
 
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { loading: authLoading, isAdmin, isAuthenticated } = useAuth()
+
+  // Handle URL parameters for highlighting requests
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight');
+    if (highlightId) {
+      setHighlightedRequestId(highlightId);
+      // Clear the highlight after 5 seconds
+      const timer = setTimeout(() => {
+        setHighlightedRequestId(null);
+        // Remove highlight from URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('highlight');
+        window.history.replaceState({}, '', url.toString());
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setHighlightedRequestId(null);
+    }
+  }, [searchParams]);
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -114,6 +135,7 @@ export default function Page() {
         setDeleteDialog={setDeleteDialog}
         auditLogLoaded={auditLogLoaded}
         fetchAuditLog={fetchAuditLog}
+        highlightedRequestId={highlightedRequestId}
       />
     </DashboardProvider>
   )

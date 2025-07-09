@@ -10,6 +10,7 @@ export interface MobileCardViewProps {
   onAction: (action: string, id: string) => Promise<void>;
   actionLoadingId?: string | null;
   onViewDetails?: (id: string) => Promise<void>;
+  highlightedRequestId?: string | null;
 }
 
 export const MobileCardView: React.FC<MobileCardViewProps> = ({
@@ -17,13 +18,26 @@ export const MobileCardView: React.FC<MobileCardViewProps> = ({
   onAction,
   actionLoadingId,
   onViewDetails,
+  highlightedRequestId,
 }) => {
   return (
     <div className="space-y-4 md:hidden">
       {data.map((row) => {
         const isLoading = actionLoadingId === row.id;
+        const isHighlighted = highlightedRequestId === row.id;
         return (
-          <div key={row.id} className="bg-card rounded-xl border border-gray-200 shadow-sm p-5 mb-4 flex flex-col gap-4">
+          <div 
+            key={row.id} 
+            className={`bg-card rounded-xl border border-gray-200 shadow-sm p-5 mb-4 flex flex-col gap-4 transition-all duration-500 ${
+              isHighlighted 
+                ? 'animate-pulse bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-l-4 border-blue-500 shadow-lg' 
+                : ''
+            }`}
+            style={{
+              animationDelay: isHighlighted ? '0.5s' : '0s',
+              animationDuration: isHighlighted ? '2s' : '0s',
+            }}
+          >
             {/* Equipment Image at Top Center */}
             {(row as unknown as { equipment?: { image?: string; name?: string } }).equipment?.image && (
               <div className="flex justify-center mb-3">

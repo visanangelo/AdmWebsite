@@ -14,8 +14,7 @@ import {
   Filter,
   Grid3X3,
   List,
-  Wrench,
-  Shield
+  Wrench
 } from 'lucide-react'
 import { Input } from '@/features/shared/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/shared/components/ui/select'
@@ -46,9 +45,8 @@ const FleetTab: React.FC<FleetTabProps> = ({
     const available = fleet.filter(item => item.status === 'Available').length
     const inUse = fleet.filter(item => item.status === 'In Use').length
     const maintenance = fleet.filter(item => item.status === 'Maintenance').length
-    const reserved = fleet.filter(item => item.status === 'Reserved').length
 
-    return { total, available, inUse, maintenance, reserved }
+    return { total, available, inUse, maintenance }
   }, [fleet])
 
   // Filter fleet based on search and status
@@ -99,7 +97,7 @@ const FleetTab: React.FC<FleetTabProps> = ({
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -132,18 +130,6 @@ const FleetTab: React.FC<FleetTabProps> = ({
                 <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.inUse}</p>
               </div>
               <Clock className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Reserved</p>
-                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.reserved}</p>
-              </div>
-              <Shield className="w-8 h-8 text-purple-500" />
             </div>
           </CardContent>
         </Card>
@@ -186,7 +172,6 @@ const FleetTab: React.FC<FleetTabProps> = ({
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="Available">Available</SelectItem>
                 <SelectItem value="In Use">In Use</SelectItem>
-                <SelectItem value="Reserved">Reserved</SelectItem>
                 <SelectItem value="Maintenance">Maintenance</SelectItem>
               </SelectContent>
             </Select>
