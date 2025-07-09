@@ -76,18 +76,34 @@ export const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disco
             
             switch (payload.eventType) {
               case 'INSERT':
-                if (payload.new && payload.new.id && payload.new.name && payload.new.status) {
+                if (payload.new && payload.new.id && payload.new.name && payload.new.status && payload.new.category) {
                   newFleet.unshift({
                     id: payload.new.id,
                     name: payload.new.name,
-                    status: payload.new.status
+                    status: payload.new.status,
+                    category: payload.new.category,
+                    image: payload.new.image ?? undefined,
+                    year: payload.new.year ?? undefined,
+                    location: payload.new.location ?? undefined,
+                    specs: payload.new.specs ?? undefined,
+                    created_at: payload.new.created_at ?? undefined,
                   });
                 }
                 break;
               case 'UPDATE':
                 newFleet = newFleet.map(item =>
-                  item.id === payload.new.id && payload.new.name && payload.new.status
-                    ? { id: payload.new.id, name: payload.new.name, status: payload.new.status }
+                  item.id === payload.new.id && payload.new.name && payload.new.status && payload.new.category
+                    ? {
+                        id: payload.new.id,
+                        name: payload.new.name,
+                        status: payload.new.status,
+                        category: payload.new.category,
+                        image: payload.new.image ?? undefined,
+                        year: payload.new.year ?? undefined,
+                        location: payload.new.location ?? undefined,
+                        specs: payload.new.specs ?? undefined,
+                        created_at: payload.new.created_at ?? undefined,
+                      }
                     : item
                 );
                 break;
