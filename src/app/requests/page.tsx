@@ -49,12 +49,19 @@ export default function RequestsPage() {
                 item !== null &&
                 'id' in item &&
                 'name' in item &&
-                'status' in item
+                'status' in item &&
+                'category' in item
             )
             .map((item) => ({
               id: String((item as Record<string, unknown>).id),
               name: String((item as Record<string, unknown>).name),
               status: String((item as Record<string, unknown>).status) as FleetItem['status'],
+              category: String((item as Record<string, unknown>).category ?? ''),
+              image: (item as Record<string, unknown>).image ? String((item as Record<string, unknown>).image) : undefined,
+              year: (item as Record<string, unknown>).year ? Number((item as Record<string, unknown>).year) : undefined,
+              location: (item as Record<string, unknown>).location ? String((item as Record<string, unknown>).location) : undefined,
+              specs: (item as Record<string, unknown>).specs ? String((item as Record<string, unknown>).specs) : undefined,
+              created_at: (item as Record<string, unknown>).created_at ? String((item as Record<string, unknown>).created_at) : undefined,
             }))
         );
       }
