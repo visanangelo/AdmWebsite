@@ -1,15 +1,14 @@
 import React from 'react'
 import type { FleetItem } from '@/features/shared'
 import type { FleetStatus } from '@/features/shared/types/rental'
-import { FleetCard, FleetCardSkeleton } from '@/features/dashboard'
-import { Card, CardContent, CardHeader, CardTitle } from '@/features/shared/components/ui/card'
+import { FleetCardSkeleton } from '@/features/dashboard'
+import { Card, CardContent } from '@/features/shared/components/ui/card'
 import { Badge } from '@/features/shared/components/ui/badge'
 import { Button } from '@/features/shared/components/ui/button'
 import { 
   Truck, 
   CheckCircle2, 
   Clock, 
-  AlertCircle, 
   Plus,
   Search,
   Filter,
@@ -30,6 +29,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/features/shared/components/ui/dropdown-menu'
+import Image from 'next/image'
 
 interface FleetTabProps {
   loading: boolean
@@ -273,10 +273,12 @@ const FleetTab: React.FC<FleetTabProps> = ({
                 {/* Equipment Image */}
                 {eq.image && (
                   <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    <img
+                    <Image
                       src={eq.image}
                       alt={eq.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-200"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                     <div className="absolute top-3 right-3">
                       <Badge className={`${getStatusColor(eq.status)} border`}>
