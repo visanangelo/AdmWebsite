@@ -48,6 +48,7 @@ const FleetTab: React.FC<FleetTabProps> = ({
   const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid')
   const [searchTerm, setSearchTerm] = React.useState('')
   const [statusFilter, setStatusFilter] = React.useState<string>('all')
+  const [loadingId, setLoadingId] = React.useState<string | null>(null)
 
   const emptyFleet = fleet.length === 0
 
@@ -110,10 +111,21 @@ const FleetTab: React.FC<FleetTabProps> = ({
   }
 
   const handleStatusChange = async (fleetId: string, newStatus: FleetStatus) => {
+    setLoadingId(fleetId)
     try {
       await onFleetStatusUpdate(fleetId, newStatus)
     } catch (error) {
       console.error('Error updating fleet status:', error)
+    }
+    setLoadingId(null)
+  }
+
+  const handleDelete = async (fleetId: string) => {
+    setLoadingId(fleetId)
+    try {
+      await onFleetDelete(fleetId)
+    } finally {
+      setLoadingId(null)
     }
   }
 
@@ -272,8 +284,9 @@ const FleetTab: React.FC<FleetTabProps> = ({
             <FleetCard
               key={eq.id}
               eq={eq}
-              onStatusChange={onFleetStatusUpdate}
-              onDelete={onFleetDelete}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+              loadingId={loadingId}
             />
           ))}
         </div>
