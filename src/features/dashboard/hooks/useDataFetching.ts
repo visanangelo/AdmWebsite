@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { getSupabaseClient } from "@/features/shared/lib/supabaseClient"
 import { useNotify } from '@/features/shared/hooks/useNotify'
-import { RentalRequestService } from "@/services/rental-requests"
-import { RentalRequest, FleetItem } from '@/types/rental'
+import { RentalRequestService } from "@/features/rental-requests"
+import { RentalRequest, FleetItem } from '@/features/shared/types/rental'
 import { DashboardStats } from '../types'
 
 export const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disconnected' | 'connecting') => void) => {

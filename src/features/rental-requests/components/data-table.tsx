@@ -12,43 +12,40 @@ import {
   getSortedRowModel,
   getPaginationRowModel,
   useReactTable,
-  Row,
-  Column,
 } from "@tanstack/react-table"
 import {
-  MoreVerticalIcon,
-  SearchIcon,
-  FilterIcon,
-  X,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ArrowUpDown,
-  CheckCircleIcon,
-  XCircleIcon,
-  Trash2Icon,
-  EditIcon,
-  EyeIcon,
-  RotateCcwIcon,
-  BanIcon,
-  AlertCircleIcon,
-  DownloadIcon,
-  RefreshCwIcon,
-  SettingsIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
-} from "lucide-react"
-import { toast } from "sonner"
-import { useState, useCallback, useMemo } from "react"
-import { Badge, Button, Checkbox, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Label } from '@/features/shared';
+  Badge,
+  Button,
+  Checkbox,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/features/shared';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { CheckCircleIcon, XCircleIcon, BanIcon, RotateCcwIcon, MoreVerticalIcon, EyeIcon, EditIcon, AlertCircleIcon, Trash2Icon } from 'lucide-react';
+import { DropdownMenuSeparator } from '@/features/shared';
 import { ActionButtons } from './ActionButtons'
+import { BulkActions } from './BulkActions';
+import { MobileCardView } from './MobileCardView';
+import { DataTableToolbar } from './DataTableToolbar';
+import { DataTablePagination } from './DataTablePagination';
+import { SortableHeader } from './SortableHeader';
+import { globalFuzzyFilterFn } from './globalFuzzyFilterFn';
 
 // Rename local Row interface to RentalRow
 export interface RentalRow {
   id: string
   date: string
   requester: string
+  first_name?: string
+  last_name?: string
   equipment: string
   status: string
   notes?: string
@@ -84,537 +81,7 @@ interface DataTableProps {
   onClearIndexedFilters?: () => Promise<void>
 }
 
-// Bulk Actions Component
-function BulkActions({ 
-  selectedRows, 
-  onBulkDelete, 
-  onBulkApprove, 
-  onBulkDecline,
-  onClearSelection 
-}: { 
-  selectedRows: string[]
-  onBulkDelete?: (ids: string[]) => Promise<void>
-  onBulkApprove?: (ids: string[]) => Promise<void>
-  onBulkDecline?: (ids: string[]) => Promise<void>
-  onClearSelection: () => void
-}) {
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleBulkAction = async (action: (ids: string[]) => Promise<void>) => {
-    if (!action) return
-    setIsLoading(true)
-    try {
-      await action(selectedRows)
-      toast.success(`Bulk action completed for ${selectedRows.length} items`)
-      onClearSelection()
-    } catch {
-      toast.error('Bulk action failed')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  if (selectedRows.length === 0) return null
-
-  return (
-    <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-md border border-gray-200">
-      <span className="text-sm font-medium text-gray-800">
-        {selectedRows.length} item{selectedRows.length > 1 ? 's' : ''} selected
-      </span>
-      <div className="flex items-center gap-1">
-        {onBulkApprove && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleBulkAction(onBulkApprove)}
-            disabled={isLoading}
-            className="h-8 bg-green-50 hover:bg-green-100 border-green-200 text-green-800"
-          >
-            <CheckCircleIcon className="h-4 w-4 mr-1" />
-            Approve All
-          </Button>
-        )}
-        {onBulkDecline && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleBulkAction(onBulkDecline)}
-            disabled={isLoading}
-            className="h-8 bg-red-50 hover:bg-red-100 border-red-200 text-red-800"
-          >
-            <XCircleIcon className="h-4 w-4 mr-1" />
-            Decline All
-          </Button>
-        )}
-        {onBulkDelete && (
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => handleBulkAction(onBulkDelete)}
-            disabled={isLoading}
-            className="h-8"
-          >
-            <Trash2Icon className="h-4 w-4 mr-1" />
-            Delete All
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={onClearSelection}
-          className="h-8"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// Mobile Card View Component
-function MobileCardView({ 
-  data, 
-  onAction, 
-  actionLoadingId,
-  onViewDetails 
-}: { 
-  data: RentalRow[]
-  onAction: (action: string, id: string) => Promise<void>
-  actionLoadingId?: string | null
-  onViewDetails?: (id: string) => Promise<void>
-}) {
-  return (
-    <div className="space-y-4 md:hidden">
-      {data.map((row) => {
-        const isLoading = actionLoadingId === row.id;
-        return (
-          <div key={row.id} className="bg-card rounded-xl border border-gray-200 shadow-sm p-5 mb-4 flex flex-col gap-4">
-            {/* Header with ID and Status */}
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-medium text-muted-foreground">#{row.id}</span>
-              <Badge variant={getStatusVariant(row.status)} className="text-xs font-semibold px-3 py-1 rounded-full">
-                {row.status}
-              </Badge>
-            </div>
-            {/* Main Info */}
-            <div className="space-y-1 text-sm">
-              <div><span className="font-medium">Requester:</span> {row.requester}</div>
-              <div><span className="font-medium">Equipment:</span> {row.equipment}</div>
-              {row.start_date && <div><span className="font-medium">Start:</span> {new Date(row.start_date).toLocaleDateString()}</div>}
-              {row.end_date && <div><span className="font-medium">End:</span> {new Date(row.end_date).toLocaleDateString()}</div>}
-              {row.project_location && <div><span className="font-medium">Location:</span> <span className="text-muted-foreground">{row.project_location}</span></div>}
-              {row.notes && <div><span className="font-medium">Notes:</span> <span className="text-muted-foreground line-clamp-2">{row.notes}</span></div>}
-            </div>
-            {/* Divider */}
-            <div className="border-t my-2" />
-            {/* Quick Action Buttons */}
-            <div className="flex flex-col gap-2">
-              {row.status === 'Pending' && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => onAction('Approve', row.id)}
-                    disabled={isLoading}
-                    className="w-full h-10 font-semibold bg-green-600 text-white hover:bg-green-700"
-                  >
-                    <CheckCircleIcon className="h-4 w-4 mr-2" /> Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => onAction('Decline', row.id)}
-                    disabled={isLoading}
-                    className="w-full h-10 font-semibold bg-red-500 text-white hover:bg-red-600"
-                  >
-                    <XCircleIcon className="h-4 w-4 mr-2" /> Decline
-                  </Button>
-                </>
-              )}
-              {row.status === 'Approved' && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => onAction('Complete', row.id)}
-                    disabled={isLoading}
-                    className="w-full h-10 font-semibold bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    <CheckCircleIcon className="h-4 w-4 mr-2" /> Complete
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => onAction('Cancel', row.id)}
-                    disabled={isLoading}
-                    className="w-full h-10 font-semibold bg-red-500 text-white hover:bg-red-600"
-                  >
-                    <BanIcon className="h-4 w-4 mr-2" /> Cancel
-                  </Button>
-                </>
-              )}
-              {(row.status === 'Completed' || row.status === 'Cancelled' || row.status === 'Declined') && (
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={() => onAction('Reopen', row.id)}
-                  disabled={isLoading}
-                  className="w-full h-10 font-semibold bg-orange-400 text-white hover:bg-orange-500"
-                >
-                  <RotateCcwIcon className="h-4 w-4 mr-2" /> Reopen
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onViewDetails?.(row.id)}
-                className="w-full h-10 font-semibold border-gray-300"
-              >
-                <EyeIcon className="h-4 w-4 mr-2" /> View
-              </Button>
-            </div>
-            {/* Divider */}
-            <div className="border-t my-2" />
-            {/* More Actions Dropdown */}
-            <div className="flex justify-end">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full h-10 rounded-lg bg-gray-50 hover:bg-gray-100 border-gray-200">
-                    <MoreVerticalIcon className="h-4 w-4 mr-2" /> More Actions
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white shadow-lg rounded-xl">
-                  <DropdownMenuItem onClick={() => onViewDetails?.(row.id)}>
-                    <EyeIcon className="mr-2 h-4 w-4" /> View Details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onAction('Edit', row.id)}>
-                    <EditIcon className="mr-2 h-4 w-4" /> Edit Request
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onAction('Reminder', row.id)}>
-                    <AlertCircleIcon className="mr-2 h-4 w-4" /> Send Reminder
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => onAction('Delete', row.id)}
-                    className="bg-red-100 text-red-800 focus:bg-red-200 focus:text-red-800"
-                  >
-                    <Trash2Icon className="mr-2 h-4 w-4" /> Delete Request
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            {/* Loading Indicator */}
-            {isLoading && (
-              <div className="flex items-center justify-center gap-2 p-2 bg-blue-50 rounded-lg mt-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                <span className="text-sm text-blue-700">Processing...</span>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  )
-}
-
-// Enhanced Toolbar with Mobile Responsiveness
-function DataTableToolbar({ 
-  table, 
-  onRefresh,
-  onExport,
-  data,
-  enableColumnVisibility,
-  dateFrom,
-  setDateFrom,
-  dateTo,
-  setDateTo,
-  globalFilter,
-  setGlobalFilter,
-  onClearIndexedFilters,
-}: {
-  table: ReturnType<typeof useReactTable<RentalRow>>
-  onRefresh?: () => Promise<void>
-  onExport?: (data: RentalRow[]) => void
-  data: RentalRow[]
-  enableColumnVisibility: boolean
-  dateFrom: string
-  setDateFrom: (date: string) => void
-  dateTo: string
-  setDateTo: (date: string) => void
-  globalFilter: string
-  setGlobalFilter: (filter: string) => void
-  onClearIndexedFilters?: () => Promise<void>
-}) {
-  const [showFilters, setShowFilters] = useState(false)
-
-  return (
-    <div className="space-y-4">
-      {/* Main Toolbar */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        {/* Search and Filters */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4 flex-1">
-          {/* Search Input */}
-          <div className="relative flex-1 max-w-sm">
-            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search requests..."
-              value={globalFilter ?? ""}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setGlobalFilter(event.target.value)}
-              className="pl-10 h-10 md:h-9"
-            />
-          </div>
-          
-          {/* Mobile Filter Toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="h-10 md:h-9"
-          >
-            <FilterIcon className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-        </div>
-        
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {onRefresh && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRefresh}
-              className="h-10 md:h-9"
-            >
-              <RefreshCwIcon className="h-4 w-4" />
-              <span className="hidden md:inline ml-2">Refresh</span>
-            </Button>
-          )}
-          
-          {onExport && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onExport(data)}
-              className="h-10 md:h-9"
-            >
-              <DownloadIcon className="h-4 w-4" />
-              <span className="hidden md:inline ml-2">Export</span>
-            </Button>
-          )}
-          
-          {enableColumnVisibility && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10 md:h-9">
-                  <SettingsIcon className="h-4 w-4" />
-                  <span className="hidden md:inline ml-2">Columns</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {table.getAllColumns()
-                  .filter((column: Column<RentalRow, unknown>) => column.getCanHide())
-                  .map((column: Column<RentalRow, unknown>) => {
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value: boolean | 'indeterminate') => column.toggleVisibility(!!value)}
-                      >
-                        {column.id}
-                      </DropdownMenuCheckboxItem>
-                    )
-                  })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </div>
-      
-      {/* Mobile Filters Panel */}
-      <div className="bg-muted/50 rounded-lg p-4 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs font-medium">From Date</Label>
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
-              className="h-9 text-sm"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-medium">To Date</Label>
-            <Input
-              type="date"
-              value={dateTo}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
-              className="h-9 text-sm"
-            />
-          </div>
-        </div>
-        
-        {onClearIndexedFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClearIndexedFilters}
-            className="w-full h-9"
-          >
-            <X className="h-4 w-4 mr-2" />
-            Clear Filters
-          </Button>
-        )}
-      </div>
-      
-      {/* Desktop Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Label className="text-sm font-medium">From:</Label>
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateFrom(event.target.value)}
-            className="h-9 w-40"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Label className="text-sm font-medium">To:</Label>
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDateTo(event.target.value)}
-            className="h-9 w-40"
-          />
-        </div>
-        {onClearIndexedFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClearIndexedFilters}
-            className="h-9"
-          >
-            <X className="h-4 w-4 mr-2" />
-            Clear Filters
-          </Button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// Helper function for status variants - using modern status colors
-function getStatusVariant(status: string) {
-  switch (status) {
-    case 'Pending': return 'reserved'
-    case 'Approved': return 'in-use' 
-    case 'Declined': return 'maintenance'
-    case 'Completed': return 'available'
-    case 'Cancelled': return 'outline'
-    default: return 'outline'
-  }
-}
-
-// Sortable header component
-function SortableHeader({ column, children }: { column: Column<RentalRow, unknown>; children: React.ReactNode }) {
-  // getIsSorted can return boolean or 'asc' | 'desc', so handle both
-  const sorted = column.getIsSorted();
-  return (
-    <Button
-      variant="ghost"
-      onClick={() => column.toggleSorting(sorted === "asc")}
-      className="h-8 px-2 font-normal"
-    >
-      {children}
-      {sorted === "asc" ? (
-        <ChevronUpIcon className="ml-2 h-4 w-4" />
-      ) : sorted === "desc" ? (
-        <ChevronDownIcon className="ml-2 h-4 w-4" />
-      ) : (
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      )}
-    </Button>
-  )
-}
-
-// Pagination Component
-function DataTablePagination({ table, pagination, setPagination }: { table: ReturnType<typeof useReactTable<RentalRow>>, pagination: { pageIndex: number, pageSize: number }, setPagination: (p: { pageIndex: number, pageSize: number }) => void }) {
-  const [open, setOpen] = React.useState(false);
-  
-  return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-2 py-4">
-      <div className="flex-1 text-sm text-muted-foreground text-center md:text-left">
-        Page {pagination.pageIndex + 1} of {table.getPageCount()}
-      </div>
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:space-x-6 lg:space-x-8">
-        <div className="flex items-center justify-center md:justify-start space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
-          <Select
-            open={open}
-            onOpenChange={setOpen}
-            value={`${pagination.pageSize}`}
-            onValueChange={(value: string) => {
-              setPagination({ ...pagination, pageSize: Number(value), pageIndex: 0 });
-              setOpen(false);
-            }}
-          >
-            <SelectTrigger className="h-10 md:h-8 w-[80px] md:w-[70px]">
-              <SelectValue>{pagination.pageSize}</SelectValue>
-            </SelectTrigger>
-            <SelectContent side="top">
-              {[10, 20, 30, 40, 50].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`}>
-                  {pageSize}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex w-full md:w-[100px] items-center justify-center text-sm font-medium">
-          Page {pagination.pageIndex + 1} of {table.getPageCount()}
-        </div>
-        <div className="flex items-center justify-center md:justify-start space-x-2">
-          <Button
-            variant="outline"
-            className="hidden h-10 w-10 md:h-8 md:w-8 p-0 lg:flex touch-manipulation"
-            onClick={() => setPagination({ ...pagination, pageIndex: 0 })}
-            disabled={pagination.pageIndex === 0}
-          >
-            <span className="sr-only">Go to first page</span>
-            <ChevronsLeftIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation"
-            onClick={() => setPagination({ ...pagination, pageIndex: Math.max(0, pagination.pageIndex - 1) })}
-            disabled={pagination.pageIndex === 0}
-          >
-            <span className="sr-only">Go to previous page</span>
-            <ChevronLeftIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-10 w-10 md:h-8 md:w-8 p-0 touch-manipulation"
-            onClick={() => setPagination({ ...pagination, pageIndex: Math.min(table.getPageCount() - 1, pagination.pageIndex + 1) })}
-            disabled={pagination.pageIndex >= table.getPageCount() - 1}
-          >
-            <span className="sr-only">Go to next page</span>
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="hidden h-10 w-10 md:h-8 md:w-8 p-0 lg:flex touch-manipulation"
-            onClick={() => setPagination({ ...pagination, pageIndex: table.getPageCount() - 1 })}
-            disabled={pagination.pageIndex >= table.getPageCount() - 1}
-          >
-            <span className="sr-only">Go to last page</span>
-            <ChevronsRightIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
+// Elimină complet funcțiile DataTableToolbar, DataTablePagination, SortableHeader, globalFuzzyFilterFn din acest fișier (păstrează doar importurile)
 
 // Quick Action Buttons Component - Memoized for better performance
 const QuickActions = React.memo(({ row, onAction, actionLoadingId }: { 
@@ -673,14 +140,7 @@ const QuickActions = React.memo(({ row, onAction, actionLoadingId }: {
 
 QuickActions.displayName = 'QuickActions'
 
-// Find the globalFuzzyFilterFn function and ensure the parameter types are explicit:
-function globalFuzzyFilterFn(row: Row<RentalRow>, columnId: string, filterValue: string): boolean {
-  // Search across all visible string columns
-  const values = Object.values(row.original)
-    .filter(v => typeof v === 'string')
-    .map(v => (v as string).toLowerCase());
-  return values.some(v => v.includes(filterValue.toLowerCase()));
-}
+// Elimină implementările vechi ale acestor subcomponente din acest fișier
 
 export function DataTable({
   data = [],
@@ -713,6 +173,17 @@ export function DataTable({
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [pagination, setPagination] = useState(() => ({ pageIndex: 0, pageSize: 10 }))
+  const [columnFilters, setColumnFilters] = useState<any[]>([]);
+
+  // Update columnFilters when dateFrom/dateTo change
+  useEffect(() => {
+    setColumnFilters([
+      {
+        id: 'start_date',
+        value: { from: dateFrom, to: dateTo }
+      }
+    ]);
+  }, [dateFrom, dateTo]);
 
   const handleViewDetails = useCallback(async (id: string) => {
     if (onViewDetails) {
@@ -754,6 +225,11 @@ export function DataTable({
           await onCancel(id)
         }
         break
+      case 'Delete':
+        if (onDelete) {
+          await onDelete(id)
+        }
+        break
       case 'Edit':
         if (onEdit) {
           await onEdit(id, {})
@@ -767,7 +243,7 @@ export function DataTable({
       default:
         console.warn(`Unknown action: ${action}`)
     }
-  }, [data, onApprove, onDecline, onComplete, onReopen, onCancel, onEdit, onReminder, handleViewDetails])
+  }, [data, onApprove, onDecline, onComplete, onReopen, onCancel, onDelete, onEdit, onReminder, handleViewDetails])
 
   const handleClearSelection = useCallback(() => {
     setRowSelection({})
@@ -801,15 +277,35 @@ export function DataTable({
       ),
       enableSorting: false,
       enableHiding: false,
-      size: 40,
+      size: 50,
+      minSize: 50,
+      maxSize: 50,
     },
+    // Add First Name column
     {
-      accessorKey: "id",
-      header: ({ column }) => <SortableHeader column={column}>ID</SortableHeader>,
+      accessorKey: "first_name",
+      header: ({ column }) => <SortableHeader column={column}>First Name</SortableHeader>,
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => (
-        <span className="font-mono text-sm font-medium">{row.getValue("id")}</span>
+        <span className="font-medium text-sm truncate max-w-[120px]" title={row.getValue("first_name") as string}>
+          {row.getValue("first_name") || '-'}
+        </span>
       ),
-      size: 80,
+      size: 120,
+      minSize: 100,
+      maxSize: 140,
+    },
+    // Add Last Name column
+    {
+      accessorKey: "last_name",
+      header: ({ column }) => <SortableHeader column={column}>Last Name</SortableHeader>,
+      cell: ({ row }: { row: TanstackRow<RentalRow> }) => (
+        <span className="font-medium text-sm truncate max-w-[120px]" title={row.getValue("last_name") as string}>
+          {row.getValue("last_name") || '-'}
+        </span>
+      ),
+      size: 120,
+      minSize: 100,
+      maxSize: 140,
     },
     {
       accessorKey: "start_date",
@@ -823,35 +319,56 @@ export function DataTable({
         );
       },
       filterFn: (row, id, value) => {
-        const date = new Date(row.getValue(id))
-        const from = value.from
-        const to = value.to
+        const cellValue = row.getValue(id);
+        if (!cellValue || typeof cellValue !== 'string') return false;
+        // Normalizează la YYYY-MM-DD
+        const rowDate = cellValue.slice(0, 10);
+
+        const from = value.from;
+        const to = value.to;
+
         if (from && to) {
-          return date >= from && date <= to
+          return rowDate >= from && rowDate <= to;
         } else if (from) {
-          return date >= from
+          return rowDate >= from;
         } else if (to) {
-          return date <= to
+          return rowDate <= to;
         }
-        return true
+        return true;
       },
       size: 120,
-    },
-    {
-      accessorKey: "requester",
-      header: ({ column }) => <SortableHeader column={column}>Requester</SortableHeader>,
-      cell: ({ row }: { row: TanstackRow<RentalRow> }) => (
-        <span className="font-medium text-sm md:text-base">{row.getValue("requester")}</span>
-      ),
-      size: 150,
+      minSize: 110,
+      maxSize: 140,
     },
     {
       accessorKey: "equipment",
       header: ({ column }) => <SortableHeader column={column}>Equipment</SortableHeader>,
-      cell: ({ row }: { row: TanstackRow<RentalRow> }) => (
-        <span className="font-medium text-sm md:text-base">{row.getValue("equipment")}</span>
-      ),
+      cell: ({ row }: { row: TanstackRow<RentalRow> }) => {
+        const equipmentData = row.getValue("equipment") as any;
+        const equipmentName = equipmentData?.name || 'Unknown';
+        const equipmentImage = equipmentData?.image;
+        
+        return (
+          <div className="flex items-center gap-3">
+            {equipmentImage && (
+              <img 
+                src={equipmentImage} 
+                alt={equipmentName}
+                className="w-8 h-8 rounded object-cover border border-border/50 shadow-sm flex-shrink-0"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
+            <span className="font-medium text-sm truncate max-w-[140px]" title={equipmentName}>
+              {equipmentName}
+            </span>
+          </div>
+        );
+      },
       size: 180,
+      minSize: 160,
+      maxSize: 220,
     },
     {
       accessorKey: "status",
@@ -871,13 +388,15 @@ export function DataTable({
         return (
           <Badge
             variant={variant}
-            className={`whitespace-nowrap font-medium text-xs md:text-sm ${extraClass}`}
+            className={`whitespace-nowrap font-medium text-sm ${extraClass}`}
           >
             {status}
           </Badge>
         );
       },
       size: 120,
+      minSize: 110,
+      maxSize: 140,
     },
     {
       accessorKey: "notes",
@@ -885,12 +404,14 @@ export function DataTable({
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => {
         const notes = row.getValue("notes") as string;
         return (
-          <span className="max-w-[150px] md:max-w-[200px] truncate text-xs md:text-sm text-muted-foreground" title={notes}>
+          <span className="max-w-[150px] truncate text-sm text-muted-foreground" title={notes}>
             {notes || '-'}
           </span>
         );
       },
-      size: 200,
+      size: 150,
+      minSize: 130,
+      maxSize: 180,
     },
     {
       id: "actions",
@@ -909,7 +430,7 @@ export function DataTable({
             <div className="flex items-center gap-1 md:gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 md:h-8 md:w-8 p-0 touch-manipulation">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 touch-manipulation">
                     <MoreVerticalIcon className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -953,6 +474,8 @@ export function DataTable({
       enableSorting: false,
       enableHiding: false,
       size: 100,
+      minSize: 90,
+      maxSize: 120,
     },
   ], [handleQuickAction, handleViewDetails, onEdit, onReminder, onDelete, actionLoadingId])
 
@@ -966,6 +489,7 @@ export function DataTable({
       rowSelection,
       globalFilter,
       pagination,
+      columnFilters,
     },
     enableRowSelection: enableBulkActions,
     onSortingChange: setSorting,
@@ -973,6 +497,7 @@ export function DataTable({
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -980,7 +505,7 @@ export function DataTable({
     globalFilterFn: globalFuzzyFilterFn,
   }), [
     data, columns, sorting, columnVisibility, rowSelection, 
-    globalFilter, pagination, enableBulkActions
+    globalFilter, pagination, enableBulkActions, columnFilters
   ])
 
   const table = useReactTable(tableConfig)
@@ -1026,15 +551,23 @@ export function DataTable({
       )}
       
       {/* Desktop Table View */}
-      <div className="hidden md:block rounded-md border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="hidden md:block rounded-md border bg-card">
+        <div className="w-full overflow-x-auto">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     return (
-                      <TableHead key={header.id} style={{ width: header.getSize() }} className="whitespace-nowrap">
+                      <TableHead 
+                        key={header.id} 
+                        style={{ 
+                          width: header.getSize(),
+                          minWidth: header.getSize(),
+                          maxWidth: header.getSize()
+                        }} 
+                        className="whitespace-nowrap text-sm font-medium px-3 py-3"
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -1056,7 +589,15 @@ export function DataTable({
                     className="hover:bg-muted/50 transition-colors"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="whitespace-nowrap">
+                      <TableCell 
+                        key={cell.id} 
+                        style={{ 
+                          width: cell.column.getSize(),
+                          minWidth: cell.column.getSize(),
+                          maxWidth: cell.column.getSize()
+                        }} 
+                        className="whitespace-nowrap text-sm px-3 py-3"
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -1072,7 +613,7 @@ export function DataTable({
                     className="h-24 text-center"
                   >
                     <div className="flex flex-col items-center space-y-2">
-                      <p className="text-muted-foreground text-sm md:text-base">
+                      <p className="text-muted-foreground text-sm">
                         {table.getFilteredRowModel().rows.length === 0 && table.getCoreRowModel().rows.length > 0
                           ? "No results found for your search."
                           : "No rental requests found."}
@@ -1085,7 +626,7 @@ export function DataTable({
                             table.resetColumnFilters()
                             table.setGlobalFilter("")
                           }}
-                          className="h-10 md:h-9"
+                          className="h-8 px-3 text-xs"
                         >
                           Clear filters
                         </Button>

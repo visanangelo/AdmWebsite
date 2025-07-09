@@ -1,6 +1,6 @@
 import React from 'react'
 import type { FleetItem } from '@/features/shared'
-import type { FleetStatus } from '@/types/rental'
+import type { FleetStatus } from '@/features/shared/types/rental'
 import { FleetCard, FleetCardSkeleton } from '@/features/dashboard'
 
 interface FleetTabProps {

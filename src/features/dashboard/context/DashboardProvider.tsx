@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useMemo } from 'react'
 import { useDataFetching } from '../hooks/useDataFetching'
 import { useDashboardActions } from '../hooks/useDashboardActions'
-import { RentalRequest, FleetItem, FleetStatus } from '@/types/rental'
+import { RentalRequest, FleetItem, FleetStatus } from '@/features/shared/types/rental'
 
 interface DashboardContextType {
   data: {

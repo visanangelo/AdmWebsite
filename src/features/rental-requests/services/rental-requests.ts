@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/features/shared/lib/supabaseClient'
-import { RentalRequest, RentalRequestFilters, CreateRequestData } from '@/features/shared/types/rental'
+import { RentalRequest, RentalRequestFilters, CreateRequestData, RentalRequestStatus } from '@/features/shared/types/rental'
 import { validateRequiredFields, validateDateRange } from '@/features/shared/lib/validation'
 
 // Cache management with separate timestamps for better performance
@@ -53,7 +53,7 @@ class RentalRequestService {
 
       let query = getSupabaseClient()
         .from("rental_requests")
-        .select("id, user_id, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status)", { count: 'exact' })
+        .select("id, user_id, first_name, last_name, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status, image)", { count: 'exact' })
 
       // Apply filters
       if (filters?.status && filters.status !== 'all') {
@@ -73,7 +73,7 @@ class RentalRequestService {
       }
       
       if (filters?.search) {
-        query = query.or(`user_id.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`)
+        query = query.or(`user_id.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`)
       }
 
       // Apply pagination
@@ -94,14 +94,16 @@ class RentalRequestService {
         return {
           id: r.id as string,
           user_id: r.user_id as string,
+          first_name: r.first_name as string,
+          last_name: r.last_name as string,
           equipment_id: r.equipment_id as string,
           start_date: r.start_date as string,
           end_date: r.end_date as string,
           project_location: r.project_location as string,
           notes: r.notes as string,
-          status: r.status as string,
+          status: r.status as RentalRequestStatus,
           created_at: r.created_at as string,
-          equipment: equipmentData?.name || 'Unknown',
+          equipment: equipmentData || { name: 'Unknown', status: 'Unknown', image: undefined },
           requester: r.user_id as string,
           date: r.created_at as string,
         }
@@ -406,7 +408,7 @@ class RentalRequestService {
     try {
       let query = getSupabaseClient()
         .from("rental_requests")
-        .select("id, user_id, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status)", { count: 'exact' })
+        .select("id, user_id, first_name, last_name, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status)", { count: 'exact' })
         .eq('user_id', userId) // This uses the rental_requests_user_id_idx index
 
       if (status) {
@@ -431,6 +433,8 @@ class RentalRequestService {
         return {
           id: r.id as string,
           user_id: r.user_id as string,
+          first_name: r.first_name as string,
+          last_name: r.last_name as string,
           equipment_id: r.equipment_id as string,
           start_date: r.start_date as string,
           end_date: r.end_date as string,
@@ -467,7 +471,7 @@ class RentalRequestService {
     try {
       let query = getSupabaseClient()
         .from("rental_requests")
-        .select("id, user_id, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status)", { count: 'exact' })
+        .select("id, user_id, first_name, last_name, equipment_id, start_date, end_date, project_location, notes, status, created_at, equipment:rental_requests_equipment_id_fkey(name, status)", { count: 'exact' })
         .eq('equipment_id', equipmentId) // This uses the rental_requests_equipment_id_idx index
 
       if (status) {
@@ -492,6 +496,8 @@ class RentalRequestService {
         return {
           id: r.id as string,
           user_id: r.user_id as string,
+          first_name: r.first_name as string,
+          last_name: r.last_name as string,
           equipment_id: r.equipment_id as string,
           start_date: r.start_date as string,
           end_date: r.end_date as string,

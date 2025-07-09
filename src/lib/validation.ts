@@ -1,5 +1,5 @@
 // Rental request validation utilities
-import { CreateRequestData } from '@/types/rental'
+import { CreateRequestData } from '@/features/shared/types/rental'
 
 /**
  * Validates that all required fields are present in the rental request data.
@@ -7,8 +7,8 @@ import { CreateRequestData } from '@/types/rental'
  * @returns Error message if missing fields, otherwise null
  */
 export function validateRequiredFields(data: Partial<CreateRequestData>): string | null {
-  if (!data.equipment_id || !data.start_date || !data.end_date || !data.project_location) {
-    return 'Missing required fields';
+  if (!data.first_name || !data.last_name || !data.equipment_id || !data.start_date || !data.end_date || !data.project_location) {
+    return 'Missing required fields: first name, last name, equipment, start date, end date, and project location are required';
   }
   return null;
 }

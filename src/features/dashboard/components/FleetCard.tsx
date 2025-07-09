@@ -2,7 +2,7 @@ import React from 'react'
 import { motion } from "framer-motion"
 import { Trash2Icon } from "lucide-react"
 import type { FleetItem } from '@/features/shared'
-import type { FleetStatus } from '@/types/rental'
+import type { FleetStatus } from '@/features/shared/types/rental'
 
 export const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
   eq: FleetItem
@@ -28,9 +28,25 @@ export const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete,
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
       <div className="relative z-10 flex justify-between items-start">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-3">
-            {eq.name}
-          </h3>
+          <div className="flex items-start gap-4 mb-3">
+            {eq.image && (
+              <div className="flex-shrink-0">
+                <img 
+                  src={eq.image} 
+                  alt={eq.name}
+                  className="w-16 h-16 rounded-lg object-cover border border-border/50 shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                {eq.name}
+              </h3>
+            </div>
+          </div>
           <div className="flex items-center gap-3 mb-4">
             <span className={`px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 ${
               statusColors[eq.status as keyof typeof statusColors] || "bg-muted text-muted-foreground border-border"
@@ -78,7 +94,12 @@ export const FleetCardSkeleton = () => (
     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/10 to-transparent -translate-x-full animate-shimmer" />
     <div className="flex justify-between items-start relative z-10">
       <div className="flex-1">
-        <div className="h-6 bg-muted rounded w-32 mb-3 animate-pulse" />
+        <div className="flex items-start gap-4 mb-3">
+          <div className="w-16 h-16 bg-muted rounded-lg animate-pulse flex-shrink-0" />
+          <div className="flex-1">
+            <div className="h-6 bg-muted rounded w-32 animate-pulse" />
+          </div>
+        </div>
         <div className="h-5 bg-muted rounded w-20 mb-4 animate-pulse" />
       </div>
       <div className="flex gap-2">

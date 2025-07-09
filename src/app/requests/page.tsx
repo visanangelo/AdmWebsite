@@ -2,18 +2,20 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getSupabaseClient } from "@/features/shared/lib/supabaseClient";
-import { RentalRequestService } from "@/services/rental-requests";
+import { RentalRequestService } from "@/features/rental-requests";
 import { Input } from "@/features/shared/components/ui/input";
 import { Textarea } from "@/features/shared/components/ui/textarea";
 import { Button } from "@/features/shared/components/ui/button";
 import { useNotify } from '@/features/shared';
-import { Calendar, MapPin, Wrench, Clock, CheckCircle, AlertCircle } from "lucide-react";
-import type { FleetItem } from '@/types/rental';
+import { Calendar, MapPin, Wrench, Clock, CheckCircle, AlertCircle, User } from "lucide-react";
+import type { FleetItem } from '@/features/shared/types/rental';
 
 // Force dynamic rendering to prevent build-time errors
 export const dynamic = 'force-dynamic'
 
 export default function RequestsPage() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [equipment, setEquipment] = useState("");
   const [fleet, setFleet] = useState<FleetItem[]>([]);
   const [startDate, setStartDate] = useState("");
@@ -98,6 +100,8 @@ export default function RequestsPage() {
       console.log('Loading toast shown');
 
       const requestData = {
+        first_name: firstName,
+        last_name: lastName,
         equipment_id: equipment,
         start_date: startDate,
         end_date: endDate,
@@ -124,6 +128,8 @@ export default function RequestsPage() {
       console.log('Success toast shown');
 
       // Reset form
+      setFirstName("");
+      setLastName("");
       setEquipment("");
       setStartDate("");
       setEndDate("");
@@ -158,7 +164,7 @@ export default function RequestsPage() {
   };
 
   const selectedEquipment = fleet.find(item => item.id === equipment);
-  const isFormValid = equipment && startDate && endDate && location;
+  const isFormValid = firstName && lastName && equipment && startDate && endDate && location;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -179,6 +185,42 @@ export default function RequestsPage() {
           </div>
           
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            {/* Name Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <User className="w-4 h-4" />
+                  First Name
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Enter your first name"
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  required
+                  className={`p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 placeholder:text-gray-400 ${
+                    firstName ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                  }`}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <User className="w-4 h-4" />
+                  Last Name
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Enter your last name"
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  required
+                  className={`p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 placeholder:text-gray-400 ${
+                    lastName ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                  }`}
+                />
+              </div>
+            </div>
+
             {/* Equipment Selection */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700">

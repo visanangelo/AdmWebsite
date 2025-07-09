@@ -10,6 +10,7 @@ import DashboardTab from "../../../app/dashboard/tabs/DashboardTab"
 import FleetTab from "../../../app/dashboard/tabs/FleetTab"
 import SettingsTab from "../../../app/dashboard/tabs/SettingsTab"
 import { DeleteDialogState } from '../types'
+import { RentalRequestService } from '@/features/rental-requests'
 
 interface DashboardContentProps {
   detailsId: string | null
@@ -88,6 +89,8 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
       id: request.id,
       date: request.date ?? request.created_at ?? '',
       requester: request.requester ?? request.user_id ?? '',
+      first_name: request.first_name,
+      last_name: request.last_name,
       equipment: typeof request.equipment === 'string' ? request.equipment : request.equipment?.name ?? '',
       status: request.status,
       notes: request.notes,
@@ -107,8 +110,8 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
     
     setActionLoadingId(deleteDialog.id)
     try {
-      // This would need to be implemented or imported from a service
-      // For now, we'll use the existing pattern
+      // Actually delete the request from the database
+      await RentalRequestService.deleteRequest(deleteDialog.id)
       setDeleteDialog({ open: false, id: null, row: null })
       
       // Use a small delay for smoother UX

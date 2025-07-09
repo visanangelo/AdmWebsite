@@ -30,9 +30,10 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ actions }) => (
         key={label + idx}
         variant="ghost"
         size="sm"
-        className={`h-8 w-8 p-0 ${colorClass}`}
+        className={`h-8 w-8 p-0 touch-manipulation ${colorClass}`}
         onClick={onClick}
         disabled={disabled}
+        title={label}
       >
         <Icon className="h-4 w-4" />
       </Button>

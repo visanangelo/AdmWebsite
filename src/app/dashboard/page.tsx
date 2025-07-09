@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient, useAuth } from "@/features/shared"
-import { RentalRequestService } from "@/services/rental-requests"
+import { RentalRequestService } from "@/features/rental-requests"
 import { DashboardProvider, DashboardContent } from "@/features/dashboard"
 import { DeleteDialogState } from "@/features/dashboard/types"
 

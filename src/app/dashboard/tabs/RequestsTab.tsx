@@ -90,14 +90,14 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
   }
 
   return (
-    <div className={`max-w-${config.maxWidth} w-full mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-8`}>
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
       {/* Modern Header Section */}
-      <div className="space-y-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-4">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">
                   {config.title}
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
@@ -113,16 +113,16 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
                 </div>
               </div>
             </div>
-            <p className="text-muted-foreground text-base leading-relaxed max-w-2xl">
+            <p className="text-muted-foreground text-sm lg:text-base leading-relaxed max-w-2xl">
               {config.description}
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 lg:gap-3">
             <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-              <CardContent className="px-4 py-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="flex items-center gap-2">
+              <CardContent className="px-3 py-2 lg:px-4 lg:py-3">
+                <div className="flex items-center gap-2 lg:gap-3 text-xs lg:text-sm">
+                  <div className="flex items-center gap-1 lg:gap-2">
                     <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="text-muted-foreground font-medium">Last sync:</span>
                   </div>
@@ -138,10 +138,10 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
               size="default"
               onClick={onRefresh}
               disabled={loading && !actionLoadingId}
-              className="h-11 px-6 gap-2 bg-background/80 backdrop-blur-sm border-border/60 hover:bg-primary/5 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
+              className="h-9 lg:h-11 px-4 lg:px-6 gap-2 bg-background/80 backdrop-blur-sm border-border/60 hover:bg-primary/5 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
             >
               <RefreshCwIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="font-medium">Refresh</span>
+              <span className="font-medium text-sm lg:text-base">Refresh</span>
             </Button>
           </div>
         </div>
@@ -151,7 +151,7 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
       <Card className="bg-card/80 backdrop-blur-sm border-border/50 shadow-sm">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-6">
+            <div className="p-4 lg:p-6">
               <DataTableSkeleton />
             </div>
           ) : (
@@ -218,6 +218,18 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
                     <span className="font-medium text-muted-foreground">Requester:</span>
                     <span className="text-foreground text-right">{deleteDialog.row.requester}</span>
                   </div>
+                  {deleteDialog.row.first_name && (
+                    <div className="flex justify-between sm:col-span-2">
+                      <span className="font-medium text-muted-foreground">First Name:</span>
+                      <span className="text-foreground text-right">{deleteDialog.row.first_name}</span>
+                    </div>
+                  )}
+                  {deleteDialog.row.last_name && (
+                    <div className="flex justify-between sm:col-span-2">
+                      <span className="font-medium text-muted-foreground">Last Name:</span>
+                      <span className="text-foreground text-right">{deleteDialog.row.last_name}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between sm:col-span-2">
                     <span className="font-medium text-muted-foreground">Date:</span>
                     <span className="text-foreground text-right">{deleteDialog.row.date ? formatDate(deleteDialog.row.date) : 'N/A'}</span>
@@ -288,6 +300,18 @@ const RequestsTab: React.FC<RequestsTabProps> = ({
                         <span className="font-medium text-muted-foreground">Requester:</span>
                         <span className="text-foreground text-right">{r.requester}</span>
                       </div>
+                      {r.first_name && (
+                        <div className="flex justify-between md:col-span-2">
+                          <span className="font-medium text-muted-foreground">First Name:</span>
+                          <span className="text-foreground text-right">{r.first_name}</span>
+                        </div>
+                      )}
+                      {r.last_name && (
+                        <div className="flex justify-between md:col-span-2">
+                          <span className="font-medium text-muted-foreground">Last Name:</span>
+                          <span className="text-foreground text-right">{r.last_name}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between md:col-span-2">
                         <span className="font-medium text-muted-foreground">Request Date:</span>
                                                  <span className="text-foreground text-right">{r.date ? formatDate(r.date) : 'N/A'}</span>
