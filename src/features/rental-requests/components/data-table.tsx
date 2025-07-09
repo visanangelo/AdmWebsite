@@ -38,6 +38,7 @@ import { DataTableToolbar } from './DataTableToolbar';
 import { DataTablePagination } from './DataTablePagination';
 import { SortableHeader } from './SortableHeader';
 import { globalFuzzyFilterFn } from './globalFuzzyFilterFn';
+import Image from 'next/image'
 
 // Rename local Row interface to RentalRow
 export interface RentalRow {
@@ -173,7 +174,7 @@ export function DataTable({
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [pagination, setPagination] = useState(() => ({ pageIndex: 0, pageSize: 10 }))
-  const [columnFilters, setColumnFilters] = useState<any[]>([]);
+  const [columnFilters, setColumnFilters] = useState<Array<{ id: string; value: unknown }>>([]);
 
   // Update columnFilters when dateFrom/dateTo change
   useEffect(() => {
@@ -344,19 +345,21 @@ export function DataTable({
       accessorKey: "equipment",
       header: ({ column }) => <SortableHeader column={column}>Equipment</SortableHeader>,
       cell: ({ row }: { row: TanstackRow<RentalRow> }) => {
-        const equipmentData = row.getValue("equipment") as any;
+        const equipmentData = row.getValue("equipment") as { name?: string; image?: string } | undefined;
         const equipmentName = equipmentData?.name || 'Unknown';
         const equipmentImage = equipmentData?.image;
         
         return (
           <div className="flex items-center gap-3">
             {equipmentImage && (
-              <img 
+              <Image 
                 src={equipmentImage} 
                 alt={equipmentName}
+                width={32}
+                height={32}
                 className="w-8 h-8 rounded object-cover border border-border/50 shadow-sm flex-shrink-0"
                 onError={(e) => {
-                  e.currentTarget.style.display = 'none';
+                  (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
             )}

@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import type { RentalRow } from './data-table';
 import { Button, Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/features/shared';
 import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon } from 'lucide-react';
 
 export interface DataTablePaginationProps {
-  table: any;
+  table: { getPageCount: () => number };
   pagination: { pageIndex: number; pageSize: number };
   setPagination: (p: { pageIndex: number; pageSize: number }) => void;
 }

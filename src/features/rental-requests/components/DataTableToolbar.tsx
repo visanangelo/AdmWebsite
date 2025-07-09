@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import type { Column } from '@tanstack/react-table';
 import type { RentalRow } from './data-table';
 import { Button, Input, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, Label } from '@/features/shared';
-import { SearchIcon, FilterIcon, RefreshCwIcon, DownloadIcon, SettingsIcon, X } from 'lucide-react';
+import { SearchIcon, RefreshCwIcon, DownloadIcon, SettingsIcon, X } from 'lucide-react';
 
 export interface DataTableToolbarProps {
-  table: any;
+  table: {
+    getAllColumns: () => Array<Column<RentalRow, unknown>>;
+  };
   onRefresh?: () => Promise<void>;
   onExport?: (data: RentalRow[]) => void;
   data: RentalRow[];
@@ -33,7 +35,6 @@ export const DataTableToolbar: React.FC<DataTableToolbarProps> = ({
   setGlobalFilter,
   onClearIndexedFilters,
 }) => {
-  const [showFilters, setShowFilters] = useState(false);
 
   return (
     <div className="space-y-3">

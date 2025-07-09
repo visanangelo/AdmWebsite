@@ -3,6 +3,7 @@ import { motion } from "framer-motion"
 import { Trash2Icon } from "lucide-react"
 import type { FleetItem } from '@/features/shared'
 import type { FleetStatus } from '@/features/shared/types/rental'
+import Image from 'next/image'
 
 export const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
   eq: FleetItem
@@ -31,12 +32,14 @@ export const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete,
           <div className="flex items-start gap-4 mb-3">
             {eq.image && (
               <div className="flex-shrink-0">
-                <img 
+                <Image 
                   src={eq.image} 
                   alt={eq.name}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-lg object-cover border border-border/50 shadow-sm"
                   onError={(e) => {
-                    e.currentTarget.style.display = 'none';
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               </div>

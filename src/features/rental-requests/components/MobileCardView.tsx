@@ -3,6 +3,7 @@ import { Badge, Button, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, 
 import { getStatusVariant } from './getStatusVariant';
 import type { RentalRow } from './data-table';
 import { CheckCircleIcon, XCircleIcon, BanIcon, RotateCcwIcon, EyeIcon, EditIcon, AlertCircleIcon, Trash2Icon, MoreVerticalIcon } from 'lucide-react';
+import Image from 'next/image'
 
 export interface MobileCardViewProps {
   data: RentalRow[];
@@ -24,14 +25,16 @@ export const MobileCardView: React.FC<MobileCardViewProps> = ({
         return (
           <div key={row.id} className="bg-card rounded-xl border border-gray-200 shadow-sm p-5 mb-4 flex flex-col gap-4">
             {/* Equipment Image at Top Center */}
-            {(row as any).equipment?.image && (
+            {(row as unknown as { equipment?: { image?: string; name?: string } }).equipment?.image && (
               <div className="flex justify-center mb-3">
-                <img 
-                  src={(row as any).equipment.image} 
-                  alt={(row as any).equipment?.name || 'Equipment'}
+                <Image 
+                  src={(row as unknown as { equipment?: { image?: string; name?: string } }).equipment!.image!} 
+                  alt={(row as unknown as { equipment?: { image?: string; name?: string } }).equipment?.name || 'Equipment'}
+                  width={80}
+                  height={80}
                   className="w-20 h-20 rounded-lg object-cover border border-border/50 shadow-md"
                   onError={(e) => {
-                    e.currentTarget.style.display = 'none';
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               </div>
@@ -40,7 +43,7 @@ export const MobileCardView: React.FC<MobileCardViewProps> = ({
             {/* Header with Status */}
             <div className="flex items-center justify-between">
               <div className="text-lg font-semibold text-foreground">
-                {(row as any).equipment?.name || row.equipment}
+                {(row as unknown as { equipment?: { name?: string } }).equipment?.name || row.equipment}
               </div>
               <Badge variant={getStatusVariant(row.status)} className="text-xs font-semibold px-3 py-1 rounded-full">
                 {row.status}
