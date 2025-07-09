@@ -4,7 +4,6 @@ import type { FleetStatus } from '@/features/shared/types/rental'
 import { FleetCardSkeleton } from '@/features/dashboard'
 import { FleetCard } from '@/features/dashboard/components/FleetCard'
 import { Card, CardContent } from '@/features/shared/components/ui/card'
-import { Badge } from '@/features/shared/components/ui/badge'
 import { Button } from '@/features/shared/components/ui/button'
 import { 
   Truck, 
@@ -16,21 +15,10 @@ import {
   Grid3X3,
   List,
   Wrench,
-  Shield,
-  Eye,
-  Edit,
-  MoreHorizontal
+  Shield
 } from 'lucide-react'
 import { Input } from '@/features/shared/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/shared/components/ui/select'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '@/features/shared/components/ui/dropdown-menu'
-import Image from 'next/image'
 
 interface FleetTabProps {
   loading: boolean
@@ -75,40 +63,7 @@ const FleetTab: React.FC<FleetTabProps> = ({
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [fleet, searchTerm, statusFilter])
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Available':
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />
-      case 'In Use':
-        return <Clock className="w-4 h-4 text-blue-500" />
-      case 'Maintenance':
-        return <Wrench className="w-4 h-4 text-orange-500" />
-      case 'Reserved':
-        return <Shield className="w-4 h-4 text-purple-500" />
-      default:
-        return <Truck className="w-4 h-4 text-gray-500" />
-    }
-  }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Available':
-        return 'bg-green-50 text-green-700 border-green-200'
-      case 'In Use':
-        return 'bg-blue-50 text-blue-700 border-blue-200'
-      case 'Maintenance':
-        return 'bg-orange-50 text-orange-700 border-orange-200'
-      case 'Reserved':
-        return 'bg-purple-50 text-purple-700 border-purple-200'
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200'
-    }
-  }
-
-  const getStatusActions = (currentStatus: string) => {
-    const allStatuses: FleetStatus[] = ['Available', 'In Use', 'Maintenance', 'Reserved']
-    return allStatuses.filter(status => status !== currentStatus)
-  }
 
   const handleStatusChange = async (fleetId: string, newStatus: FleetStatus) => {
     setLoadingId(fleetId)

@@ -67,10 +67,10 @@ export const FleetCard: React.FC<FleetCardProps> = React.memo(({ eq, onStatusCha
   }
 
   return (
-    <div className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 group rounded-xl bg-card/80 p-4 md:p-6 min-h-[370px] flex flex-col justify-between">
+    <div className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 group rounded-xl bg-card/80 p-4 md:p-6 min-h-[420px] flex flex-col justify-between">
       {/* Equipment Image */}
       {eq.image && (
-        <div className="relative w-full h-44 md:h-48 mb-3 md:mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+        <div className="relative w-full h-44 md:h-48 mb-4 md:mb-5 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
           <Image
             src={eq.image}
             alt={eq.name}
@@ -89,7 +89,7 @@ export const FleetCard: React.FC<FleetCardProps> = React.memo(({ eq, onStatusCha
       )}
 
       {/* Equipment Info */}
-      <div className="space-y-2 md:space-y-3 flex-1">
+      <div className="space-y-3 md:space-y-4 flex-1">
         <div>
           <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg truncate">{eq.name}</h3>
           {eq.category && (
@@ -104,16 +104,21 @@ export const FleetCard: React.FC<FleetCardProps> = React.memo(({ eq, onStatusCha
             <span className="ml-1">{eq.status}</span>
           </Badge>
         )}
+      </div>
 
-        {/* Quick Status Actions */}
-        <div className="flex flex-wrap gap-2 mt-2 mb-2 md:mb-3">
+      {/* Status Actions Section */}
+      <div className="mt-4 md:mt-5">
+        <div className="mb-3">
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Change Status</h4>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
           {getStatusActions(eq.status).map(status => (
             <Button
               key={status}
               variant="outline"
-              size="lg"
+              size="sm"
               onClick={() => onStatusChange(eq.id, status)}
-              className="text-xs md:text-sm rounded-lg px-4 py-2 min-w-[90px] focus:ring-2 focus:ring-primary/40 focus:outline-none"
+              className="text-xs rounded-lg py-2 px-3 focus:ring-2 focus:ring-primary/40 focus:outline-none border-dashed"
               disabled={isLoading}
             >
               {getStatusIcon(status)}
@@ -123,49 +128,60 @@ export const FleetCard: React.FC<FleetCardProps> = React.memo(({ eq, onStatusCha
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="border-t border-border/60 my-2 md:my-3" />
-
-      {/* Actions Row */}
-      <div className="flex gap-2 pt-1 md:pt-2">
-        <Button
-          variant="default"
-          size="lg"
-          className="flex-1 rounded-lg py-2 md:py-2.5 text-base md:text-base focus:ring-2 focus:ring-primary/40 focus:outline-none"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <span className="flex items-center gap-2"><span className="animate-spin rounded-full h-4 w-4 border-2 border-border border-t-primary" /> Updating...</span>
-          ) : (
-            <><Eye className="w-5 h-5 mr-2" />View</>
-          )}
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="lg" className="rounded-lg px-3 py-2 min-w-[44px] focus:ring-2 focus:ring-primary/40 focus:outline-none" disabled={isLoading}>
-              <MoreHorizontal className="w-5 h-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="flex items-center gap-2" disabled={isLoading}>
-              <Edit className="w-4 h-4" />
-              Edit Equipment
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-2" disabled={isLoading}>
-              <Eye className="w-4 h-4" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="text-red-600 focus:text-red-600 flex items-center gap-2"
-              onClick={() => !isLoading && onDelete(eq.id)}
-              disabled={isLoading}
-            >
-              <Truck className="w-4 h-4" />
-              Delete Equipment
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {/* Main Actions Section */}
+      <div className="mt-4 md:mt-5 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex gap-3">
+          <Button
+            variant="default"
+            size="lg"
+            className="flex-1 rounded-lg py-2.5 text-sm font-medium focus:ring-2 focus:ring-primary/40 focus:outline-none shadow-sm"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                Updating...
+              </span>
+            ) : (
+              <>
+                <Eye className="w-4 h-4 mr-2" />
+                View Details
+              </>
+            )}
+          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="rounded-lg px-4 py-2.5 min-w-[44px] focus:ring-2 focus:ring-primary/40 focus:outline-none border-gray-300 dark:border-gray-600" 
+                disabled={isLoading}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="flex items-center gap-2 py-2" disabled={isLoading}>
+                <Edit className="w-4 h-4" />
+                Edit Equipment
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center gap-2 py-2" disabled={isLoading}>
+                <Eye className="w-4 h-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-red-600 focus:text-red-600 flex items-center gap-2 py-2"
+                onClick={() => !isLoading && onDelete(eq.id)}
+                disabled={isLoading}
+              >
+                <Truck className="w-4 h-4" />
+                Delete Equipment
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   )
@@ -174,7 +190,7 @@ export const FleetCard: React.FC<FleetCardProps> = React.memo(({ eq, onStatusCha
 FleetCard.displayName = 'FleetCard'
 
 export const FleetCardSkeleton = () => (
-  <div className="relative overflow-hidden bg-card/80 backdrop-blur-md p-6 rounded-xl border border-border shadow-custom min-h-[370px]">
+  <div className="relative overflow-hidden bg-card/80 backdrop-blur-md p-6 rounded-xl border border-border shadow-custom min-h-[420px]">
     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/10 to-transparent -translate-x-full animate-shimmer" />
     <div className="flex justify-between items-start relative z-10">
       <div className="flex-1">
