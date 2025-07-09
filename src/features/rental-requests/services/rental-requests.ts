@@ -440,9 +440,9 @@ class RentalRequestService {
           end_date: r.end_date as string,
           project_location: r.project_location as string,
           notes: r.notes as string,
-          status: r.status as string,
+          status: r.status as RentalRequestStatus,
           created_at: r.created_at as string,
-          equipment: equipmentData?.name || 'Unknown',
+          equipment: equipmentData || { name: 'Unknown', status: 'Unknown', image: undefined },
           requester: r.user_id as string,
           date: r.created_at as string,
         }
@@ -503,9 +503,9 @@ class RentalRequestService {
           end_date: r.end_date as string,
           project_location: r.project_location as string,
           notes: r.notes as string,
-          status: r.status as string,
+          status: r.status as RentalRequestStatus,
           created_at: r.created_at as string,
-          equipment: equipmentData?.name || 'Unknown',
+          equipment: equipmentData || { name: 'Unknown', status: 'Unknown', image: undefined },
           requester: r.user_id as string,
           date: r.created_at as string,
         }
