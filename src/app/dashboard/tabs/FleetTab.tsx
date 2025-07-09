@@ -2,6 +2,34 @@ import React from 'react'
 import type { FleetItem } from '@/features/shared'
 import type { FleetStatus } from '@/features/shared/types/rental'
 import { FleetCard, FleetCardSkeleton } from '@/features/dashboard'
+import { Card, CardContent, CardHeader, CardTitle } from '@/features/shared/components/ui/card'
+import { Badge } from '@/features/shared/components/ui/badge'
+import { Button } from '@/features/shared/components/ui/button'
+import { 
+  Truck, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle, 
+  Plus,
+  Search,
+  Filter,
+  Grid3X3,
+  List,
+  Wrench,
+  Shield,
+  Eye,
+  Edit,
+  MoreHorizontal
+} from 'lucide-react'
+import { Input } from '@/features/shared/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/shared/components/ui/select'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/features/shared/components/ui/dropdown-menu'
 
 interface FleetTabProps {
   loading: boolean
@@ -16,41 +44,332 @@ const FleetTab: React.FC<FleetTabProps> = ({
   onFleetDelete, 
   onFleetStatusUpdate 
 }) => {
+  const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid')
+  const [searchTerm, setSearchTerm] = React.useState('')
+  const [statusFilter, setStatusFilter] = React.useState<string>('all')
+
   const emptyFleet = fleet.length === 0
 
+  // Calculate fleet statistics
+  const stats = React.useMemo(() => {
+    const total = fleet.length
+    const available = fleet.filter(item => item.status === 'Available').length
+    const inUse = fleet.filter(item => item.status === 'In Use').length
+    const maintenance = fleet.filter(item => item.status === 'Maintenance').length
+    const reserved = fleet.filter(item => item.status === 'Reserved').length
+
+    return { total, available, inUse, maintenance, reserved }
+  }, [fleet])
+
+  // Filter fleet based on search and status
+  const filteredFleet = React.useMemo(() => {
+    return fleet
+      .filter(item => item && item.id)
+      .filter(item => 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.category?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .filter(item => statusFilter === 'all' || item.status === statusFilter)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [fleet, searchTerm, statusFilter])
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Available':
+        return <CheckCircle2 className="w-4 h-4 text-green-500" />
+      case 'In Use':
+        return <Clock className="w-4 h-4 text-blue-500" />
+      case 'Maintenance':
+        return <Wrench className="w-4 h-4 text-orange-500" />
+      case 'Reserved':
+        return <Shield className="w-4 h-4 text-purple-500" />
+      default:
+        return <Truck className="w-4 h-4 text-gray-500" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Available':
+        return 'bg-green-50 text-green-700 border-green-200'
+      case 'In Use':
+        return 'bg-blue-50 text-blue-700 border-blue-200'
+      case 'Maintenance':
+        return 'bg-orange-50 text-orange-700 border-orange-200'
+      case 'Reserved':
+        return 'bg-purple-50 text-purple-700 border-purple-200'
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200'
+    }
+  }
+
+  const getStatusActions = (currentStatus: string) => {
+    const allStatuses: FleetStatus[] = ['Available', 'In Use', 'Maintenance', 'Reserved']
+    return allStatuses.filter(status => status !== currentStatus)
+  }
+
+  const handleStatusChange = async (fleetId: string, newStatus: FleetStatus) => {
+    try {
+      await onFleetStatusUpdate(fleetId, newStatus)
+    } catch (error) {
+      console.error('Error updating fleet status:', error)
+    }
+  }
+
   return (
-    <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12">
-      <div className="space-y-4">
-        {loading ? (
-          <>
-            <FleetCardSkeleton />
-            <FleetCardSkeleton />
-            <FleetCardSkeleton />
-          </>
-        ) : emptyFleet ? (
-          <div className="text-center py-8 text-muted-foreground">No fleet vehicles found.</div>
-        ) : (
-          fleet
-            .filter(item => item && item.id)
-            .slice()
-            .sort((a, b) => a.id.localeCompare(b.id))
-            .map(eq => (
-              <FleetCard
-                key={eq.id}
-                eq={eq}
-                onStatus={async (id: string, status: FleetStatus) => {
-                  try {
-                    await onFleetStatusUpdate(id, status)
-                  } catch (error) {
-                    console.error('Error updating fleet status:', error)
-                  }
-                }}
-                onDelete={onFleetDelete}
-                loadingId={null}
-              />
-            ))
-        )}
+    <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pb-12 space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Fleet Management</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your equipment and vehicles</p>
+        </div>
+        <Button className="w-full lg:w-auto">
+          <Plus className="w-4 h-4 mr-2" />
+          Add Equipment
+        </Button>
       </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Fleet</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
+              </div>
+              <Truck className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Available</p>
+                <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.available}</p>
+              </div>
+              <CheckCircle2 className="w-8 h-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">In Use</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.inUse}</p>
+              </div>
+              <Clock className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Reserved</p>
+                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.reserved}</p>
+              </div>
+              <Shield className="w-8 h-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Maintenance</p>
+                <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.maintenance}</p>
+              </div>
+              <Wrench className="w-8 h-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters and Controls */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search equipment..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Available">Available</SelectItem>
+                <SelectItem value="In Use">In Use</SelectItem>
+                <SelectItem value="Reserved">Reserved</SelectItem>
+                <SelectItem value="Maintenance">Maintenance</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* View Toggle */}
+            <div className="flex border rounded-lg p-1 bg-gray-50 dark:bg-gray-800">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-8 px-3"
+              >
+                <Grid3X3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-8 px-3"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Fleet Content */}
+      {loading ? (
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+          <FleetCardSkeleton />
+          <FleetCardSkeleton />
+          <FleetCardSkeleton />
+        </div>
+      ) : emptyFleet ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-12 text-center">
+            <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No fleet vehicles found</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Get started by adding your first piece of equipment</p>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Equipment
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+          {filteredFleet.map(eq => (
+            <Card key={eq.id} className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 group">
+              <CardContent className="p-6">
+                {/* Equipment Image */}
+                {eq.image && (
+                  <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <img
+                      src={eq.image}
+                      alt={eq.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <div className="absolute top-3 right-3">
+                      <Badge className={`${getStatusColor(eq.status)} border`}>
+                        {getStatusIcon(eq.status)}
+                        <span className="ml-1">{eq.status}</span>
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+
+                {/* Equipment Info */}
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{eq.name}</h3>
+                    {eq.category && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{eq.category}</p>
+                    )}
+                  </div>
+
+                  {/* Status Badge (if no image) */}
+                  {!eq.image && (
+                    <Badge className={`${getStatusColor(eq.status)} border w-fit`}>
+                      {getStatusIcon(eq.status)}
+                      <span className="ml-1">{eq.status}</span>
+                    </Badge>
+                  )}
+
+                  {/* Quick Status Actions */}
+                  <div className="flex flex-wrap gap-2">
+                    {getStatusActions(eq.status).map(status => (
+                      <Button
+                        key={status}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStatusChange(eq.id, status)}
+                        className="text-xs"
+                      >
+                        {getStatusIcon(status)}
+                        <span className="ml-1">{status}</span>
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Actions Row */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      View
+                    </Button>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Equipment
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => onFleetDelete(eq.id)}
+                        >
+                          <Truck className="w-4 h-4 mr-2" />
+                          Delete Equipment
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Results Count */}
+      {!loading && !emptyFleet && (
+        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+          Showing {filteredFleet.length} of {fleet.length} equipment
+        </div>
+      )}
     </div>
   )
 }
