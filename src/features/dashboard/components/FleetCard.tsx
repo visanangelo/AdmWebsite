@@ -1,92 +1,162 @@
 import React from 'react'
-import { motion } from "framer-motion"
-import { Trash2Icon } from "lucide-react"
 import type { FleetItem } from '@/features/shared'
 import type { FleetStatus } from '@/features/shared/types/rental'
+import { Badge } from '@/features/shared/components/ui/badge'
+import { Button } from '@/features/shared/components/ui/button'
+import { 
+  Truck, 
+  CheckCircle2, 
+  Clock, 
+  Wrench, 
+  Shield, 
+  Eye, 
+  Edit, 
+  MoreHorizontal 
+} from 'lucide-react'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/features/shared/components/ui/dropdown-menu'
 import Image from 'next/image'
 
-export const FleetCard = React.memo(function FleetCard({ eq, onStatus, onDelete, loadingId }: {
+interface FleetCardProps {
   eq: FleetItem
-  onStatus: (id: string, status: FleetStatus) => void
+  onStatusChange: (id: string, status: FleetStatus) => void
   onDelete: (id: string) => void
-  loadingId?: string | null | undefined
-}) {
-  const isLoading = loadingId === eq.id
-  const statusColors = {
-    "Available": "bg-status-available-bg text-status-available border-status-available/20",
-    "In Use": "bg-status-in-use-bg text-status-in-use border-status-in-use/20",
-    "Reserved": "bg-status-reserved-bg text-status-reserved border-status-reserved/20",
-    "Maintenance": "bg-status-maintenance-bg text-status-maintenance border-status-maintenance/20"
+}
+
+export const FleetCard: React.FC<FleetCardProps> = React.memo(({ eq, onStatusChange, onDelete }) => {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Available':
+        return <CheckCircle2 className="w-4 h-4 text-green-500" />
+      case 'In Use':
+        return <Clock className="w-4 h-4 text-blue-500" />
+      case 'Maintenance':
+        return <Wrench className="w-4 h-4 text-orange-500" />
+      case 'Reserved':
+        return <Shield className="w-4 h-4 text-purple-500" />
+      default:
+        return <Truck className="w-4 h-4 text-gray-500" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Available':
+        return 'bg-green-50 text-green-700 border-green-200'
+      case 'In Use':
+        return 'bg-blue-50 text-blue-700 border-blue-200'
+      case 'Maintenance':
+        return 'bg-orange-50 text-orange-700 border-orange-200'
+      case 'Reserved':
+        return 'bg-purple-50 text-purple-700 border-purple-200'
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200'
+    }
+  }
+
+  const getStatusActions = (currentStatus: string) => {
+    const allStatuses: FleetStatus[] = ['Available', 'In Use', 'Maintenance', 'Reserved']
+    return allStatuses.filter(status => status !== currentStatus)
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="group relative bg-card/80 backdrop-blur-md p-6 rounded-xl border border-border shadow-custom hover:shadow-custom transition-all duration-300 hover:scale-[1.01] hover:border-border/80"
-    >
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
-      <div className="relative z-10 flex justify-between items-start">
-        <div className="flex-1">
-          <div className="flex items-start gap-4 mb-3">
-            {eq.image && (
-              <div className="flex-shrink-0">
-                <Image 
-                  src={eq.image} 
-                  alt={eq.name}
-                  width={64}
-                  height={64}
-                  className="w-16 h-16 rounded-lg object-cover border border-border/50 shadow-sm"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                {eq.name}
-              </h3>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 mb-4">
-            <span className={`px-3 py-1.5 rounded-full text-xs font-medium border shadow-sm transition-all duration-300 ${
-              statusColors[eq.status as keyof typeof statusColors] || "bg-muted text-muted-foreground border-border"
-            }`}>
-              {eq.status}
-            </span>
-            {isLoading && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="animate-spin rounded-full h-3 w-3 border border-border border-t-primary"></div>
-                <span>Updating...</span>
-              </div>
-            )}
+    <div className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 group rounded-xl bg-card/80 p-6">
+      {/* Equipment Image */}
+      {eq.image && (
+        <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+          <Image
+            src={eq.image}
+            alt={eq.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-200"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+          <div className="absolute top-3 right-3">
+            <Badge className={`${getStatusColor(eq.status)} border`}>
+              {getStatusIcon(eq.status)}
+              <span className="ml-1">{eq.status}</span>
+            </Badge>
           </div>
         </div>
-        <div className="flex gap-2">
-          <select
-            value={eq.status}
-            onChange={(e) => onStatus(eq.id, e.target.value as FleetStatus)}
-            disabled={isLoading}
-            className="text-sm border border-border rounded-lg px-3 py-2 bg-background/80 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      )}
+
+      {/* Equipment Info */}
+      <div className="space-y-3">
+        <div>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{eq.name}</h3>
+          {eq.category && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">{eq.category}</p>
+          )}
+        </div>
+
+        {/* Status Badge (if no image) */}
+        {!eq.image && (
+          <Badge className={`${getStatusColor(eq.status)} border w-fit`}>
+            {getStatusIcon(eq.status)}
+            <span className="ml-1">{eq.status}</span>
+          </Badge>
+        )}
+
+        {/* Quick Status Actions */}
+        <div className="flex flex-wrap gap-2">
+          {getStatusActions(eq.status).map(status => (
+            <Button
+              key={status}
+              variant="outline"
+              size="sm"
+              onClick={() => onStatusChange(eq.id, status)}
+              className="text-xs"
+            >
+              {getStatusIcon(status)}
+              <span className="ml-1">{status}</span>
+            </Button>
+          ))}
+        </div>
+
+        {/* Actions Row */}
+        <div className="flex gap-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
           >
-            <option value="Available">Available</option>
-            <option value="In Use">In Use</option>
-            <option value="Reserved">Reserved</option>
-            <option value="Maintenance">Maintenance</option>
-          </select>
-          <button
-            onClick={() => onDelete(eq.id)}
-            disabled={isLoading}
-            className="p-2 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group/delete"
-            title="Delete equipment"
-          >
-            <Trash2Icon className="h-4 w-4 group-hover/delete:scale-110 transition-transform" />
-          </button>
+            <Eye className="w-4 h-4 mr-1" />
+            View
+          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Equipment
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Eye className="w-4 h-4 mr-2" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-red-600 focus:text-red-600"
+                onClick={() => onDelete(eq.id)}
+              >
+                <Truck className="w-4 h-4 mr-2" />
+                Delete Equipment
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 })
 

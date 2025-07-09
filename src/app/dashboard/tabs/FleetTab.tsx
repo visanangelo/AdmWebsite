@@ -2,6 +2,7 @@ import React from 'react'
 import type { FleetItem } from '@/features/shared'
 import type { FleetStatus } from '@/features/shared/types/rental'
 import { FleetCardSkeleton } from '@/features/dashboard'
+import { FleetCard } from '@/features/dashboard/components/FleetCard'
 import { Card, CardContent } from '@/features/shared/components/ui/card'
 import { Badge } from '@/features/shared/components/ui/badge'
 import { Button } from '@/features/shared/components/ui/button'
@@ -268,100 +269,12 @@ const FleetTab: React.FC<FleetTabProps> = ({
       ) : (
         <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
           {filteredFleet.map(eq => (
-            <Card key={eq.id} className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 group">
-              <CardContent className="p-6">
-                {/* Equipment Image */}
-                {eq.image && (
-                  <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    <Image
-                      src={eq.image}
-                      alt={eq.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-200"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                    <div className="absolute top-3 right-3">
-                      <Badge className={`${getStatusColor(eq.status)} border`}>
-                        {getStatusIcon(eq.status)}
-                        <span className="ml-1">{eq.status}</span>
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-
-                {/* Equipment Info */}
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{eq.name}</h3>
-                    {eq.category && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{eq.category}</p>
-                    )}
-                  </div>
-
-                  {/* Status Badge (if no image) */}
-                  {!eq.image && (
-                    <Badge className={`${getStatusColor(eq.status)} border w-fit`}>
-                      {getStatusIcon(eq.status)}
-                      <span className="ml-1">{eq.status}</span>
-                    </Badge>
-                  )}
-
-                  {/* Quick Status Actions */}
-                  <div className="flex flex-wrap gap-2">
-                    {getStatusActions(eq.status).map(status => (
-                      <Button
-                        key={status}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStatusChange(eq.id, status)}
-                        className="text-xs"
-                      >
-                        {getStatusIcon(status)}
-                        <span className="ml-1">{status}</span>
-                      </Button>
-                    ))}
-                  </div>
-
-                  {/* Actions Row */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Equipment
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-red-600 focus:text-red-600"
-                          onClick={() => onFleetDelete(eq.id)}
-                        >
-                          <Truck className="w-4 h-4 mr-2" />
-                          Delete Equipment
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <FleetCard
+              key={eq.id}
+              eq={eq}
+              onStatusChange={onFleetStatusUpdate}
+              onDelete={onFleetDelete}
+            />
           ))}
         </div>
       )}
