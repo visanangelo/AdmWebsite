@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getSupabaseClient } from '@/features/shared/lib/supabaseClient'
-import type { RealtimeChannel } from '@supabase/supabase-js'
+import {
+  addNotificationsListener,
+} from '@/lib/notifications-realtime'
 
 export interface Notification {
   id: string
@@ -23,205 +25,112 @@ export interface Notification {
   updated_at: string
 }
 
+/**
+ * React hook that exposes notifications state and mutation helpers.
+ */
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [isConnected, setIsConnected] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected')
   const [loading, setLoading] = useState(true)
-  const subscriptionRef = useRef<RealtimeChannel | null>(null)
-  const initializedRef = useRef(false)
-  const isSubscribingRef = useRef(false)
+  const [isConnected, setIsConnected] = useState<'connected' | 'disconnected'>('disconnected')
 
-  // Fetch notifications from database
+  /** Always derived from notifications array. */
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  )
+
+  /* ---------- Fetch initial list ---------- */
   const fetchNotifications = useCallback(async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await getSupabaseClient()
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50)
+    setLoading(true)
 
-      if (error) {
-        console.error('Error fetching notifications:', error)
-        return
-      }
+    const { data, error } = await getSupabaseClient()
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50)
 
-      if (data) {
-        setNotifications(data as Notification[])
-        setUnreadCount(data.filter((n: Notification) => !n.read).length)
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    } finally {
-      setLoading(false)
-    }
+    if (error) console.error('fetchNotifications error:', error)
+    if (data) setNotifications(data as Notification[])
+
+    setLoading(false)
   }, [])
 
-  // Mark notification as read
-  const markAsRead = useCallback(async (id: string) => {
-    try {
+  /* ---------- Server mutations ---------- */
+  const patchNotification = useCallback(
+    (id: string, patch: Partial<Notification>) => {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, ...patch } : n))
+      )
+    },
+    []
+  )
+
+  const markAsRead = useCallback(
+    async (id: string) => {
       const { error } = await getSupabaseClient()
         .from('notifications')
         .update({ read: true })
         .eq('id', id)
 
-      if (error) {
-        console.error('Error marking notification as read:', error)
-        return
-      }
+      if (!error) patchNotification(id, { read: true })
+      else console.error('markAsRead error:', error)
+    },
+    [patchNotification]
+  )
 
-      // Update local state and recalculate unread count
-      setNotifications(prev => {
-        const newNotifications = prev.map(n => n.id === id ? { ...n, read: true } : n)
-        const newUnreadCount = newNotifications.filter(n => !n.read).length
-        setUnreadCount(newUnreadCount)
-        return newNotifications
-      })
-    } catch (error) {
-      console.error('Error marking notification as read:', error)
-    }
-  }, [])
-
-  // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
-    try {
-      const { error } = await getSupabaseClient()
-        .from('notifications')
-        .update({ read: true })
-        .eq('read', false)
+    const { error } = await getSupabaseClient()
+      .from('notifications')
+      .update({ read: true })
+      .eq('read', false)
 
-      if (error) {
-        console.error('Error marking all notifications as read:', error)
-        return
-      }
-
-      // Update local state and recalculate unread count
-      setNotifications(prev => {
-        const newNotifications = prev.map(n => ({ ...n, read: true }))
-        setUnreadCount(0)
-        return newNotifications
-      })
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error)
-    }
+    if (!error) setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    else console.error('markAllAsRead error:', error)
   }, [])
 
-  // Delete notification
   const deleteNotification = useCallback(async (id: string) => {
-    try {
-      const { error } = await getSupabaseClient()
-        .from('notifications')
-        .delete()
-        .eq('id', id)
+    const { error } = await getSupabaseClient()
+      .from('notifications')
+      .delete()
+      .eq('id', id)
 
-      if (error) {
-        console.error('Error deleting notification:', error)
-        return
-      }
-
-      // Update local state and recalculate unread count
-      setNotifications(prev => {
-        const newNotifications = prev.filter(n => n.id !== id)
-        const newUnreadCount = newNotifications.filter(n => !n.read).length
-        setUnreadCount(newUnreadCount)
-        return newNotifications
-      })
-    } catch (error) {
-      console.error('Error deleting notification:', error)
-    }
+    if (!error)
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    else console.error('deleteNotification error:', error)
   }, [])
 
-  // Setup real-time subscription - NO DEPENDENCIES to prevent recreation
-  const setupRealtimeSubscription = useCallback(() => {
-    // Prevent multiple simultaneous subscriptions
-    if (isSubscribingRef.current || subscriptionRef.current) {
-      return
-    }
-
-    isSubscribingRef.current = true
-
-    try {
-      // Cleanup any existing subscription first
-      if (subscriptionRef.current) {
-        getSupabaseClient().removeChannel(subscriptionRef.current)
-        subscriptionRef.current = null
-      }
-
-      // Create new subscription using exact same pattern as dashboard
-      const channel = getSupabaseClient()
-        .channel('notifications_changes')
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'notifications' },
-          (payload) => {
-            // Use setNotifications directly to avoid dependency issues (same as dashboard)
-            setNotifications((prev: Notification[]) => {
-              let newNotifications = [...prev]
-              
-              if (payload.eventType === 'INSERT') {
-                const newNotification = payload.new as Notification
-                newNotifications = [newNotification, ...newNotifications]
-              } else if (payload.eventType === 'UPDATE') {
-                const updatedNotification = payload.new as Notification
-                newNotifications = newNotifications.map(n => 
-                  n.id === updatedNotification.id ? updatedNotification : n
-                )
-              } else if (payload.eventType === 'DELETE') {
-                const deletedId = payload.old?.id
-                if (deletedId) {
-                  newNotifications = newNotifications.filter(n => n.id !== deletedId)
-                }
-              }
-              
-              // Always recalculate unread count from the current notifications array
-              // This ensures accuracy and prevents race conditions
-              const newUnreadCount = newNotifications.filter(n => !n.read).length
-              setUnreadCount(newUnreadCount)
-              
-              return newNotifications
-            })
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            setIsConnected('connected')
-            isSubscribingRef.current = false
-          } else if (status === 'CHANNEL_ERROR') {
-            setIsConnected('disconnected')
-            isSubscribingRef.current = false
-            subscriptionRef.current = null
-          }
-        })
-
-      subscriptionRef.current = channel
-    } catch (error) {
-      console.error('Error setting up real-time subscription:', error)
-      isSubscribingRef.current = false
-    }
-  }, []) // NO DEPENDENCIES
-
-  // Initialize data and setup realtime subscription
+  /* ---------- Realtime subscription ---------- */
   useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
+    // initial fetch
+    fetchNotifications().finally(() => setIsConnected('connected'))
 
-    const initializeData = async () => {
-      await fetchNotifications()
-      setupRealtimeSubscription()
-    }
+    // register singleton listener
+    const unsubscribe = addNotificationsListener((payload) => {
+      setNotifications((prev) => {
+        let next = [...prev]
+        if (payload.eventType === 'INSERT') {
+          next = [payload.new as Notification, ...next]
+        } else if (payload.eventType === 'UPDATE') {
+          next = next.map((n) =>
+            n.id === (payload.new as Notification).id
+              ? (payload.new as Notification)
+              : n
+          )
+        } else if (payload.eventType === 'DELETE') {
+          next = next.filter((n) => n.id !== (payload.old as Notification).id)
+        }
+        return next
+      })
+    })
 
-    initializeData()
-
-    // Cleanup on unmount
+    // cleanup for this component only: remove its listener
     return () => {
-      if (subscriptionRef.current) {
-        getSupabaseClient().removeChannel(subscriptionRef.current)
-        subscriptionRef.current = null
-      }
-      isSubscribingRef.current = false
-      initializedRef.current = false
+      unsubscribe()
     }
-  }, [fetchNotifications, setupRealtimeSubscription])
+  }, [fetchNotifications])
+
+  /* ---------- Optional: global cleanup ---------- */
+  // e.g. call closeNotificationsChannel() inside an AuthProvider sign‑out flow
 
   return {
     notifications,
@@ -231,6 +140,6 @@ export function useNotifications() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    refresh: fetchNotifications
+    refresh: fetchNotifications,
   }
 } 

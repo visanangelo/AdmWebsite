@@ -287,6 +287,7 @@ export const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disco
 
   // Cleanup on unmount
   useEffect(() => {
+    const pendingUpdates = pendingEquipmentUpdatesRef.current;
     return () => {
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current)
@@ -296,8 +297,7 @@ export const useDataFetching = (setRealtimeStatus: (status: 'connected' | 'disco
       // Clear equipment cache
       equipmentCache.clear()
       batchEquipmentUpdates.clear()
-      // Fix the React hooks dependency warning by copying the ref value
-      const pendingUpdates = pendingEquipmentUpdatesRef.current
+      // Use the captured value
       pendingUpdates.clear()
     }
   }, [])
