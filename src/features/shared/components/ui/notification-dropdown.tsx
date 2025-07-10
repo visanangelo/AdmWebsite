@@ -264,10 +264,15 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
             !isMobile && "px-0"
           )}>
             <ScrollArea className={cn(
-              "transition-all duration-300",
+              "transition-all duration-300 notification-scroll-area",
               isMobile ? "h-[calc(90vh-120px)] touch-pan-y" : "h-[60vh]",
               "overflow-y-auto"
-            )}>
+            )}
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain'
+            }}
+            >
               {loading ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="flex items-center gap-3">
@@ -286,7 +291,13 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2 p-4 touch-pan-y">
+                <div 
+                  className="space-y-2 p-4 touch-pan-y notification-content"
+                  style={{
+                    WebkitOverflowScrolling: 'touch',
+                    overscrollBehavior: 'contain'
+                  }}
+                >
                   {notifications.map((notification, index) => (
                     <React.Fragment key={notification.id}>
                       <div

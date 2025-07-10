@@ -314,3 +314,41 @@
 
 
 /* End of Selection */
+
+
+/* Enhanced mobile scrolling support */
+
+[data-radix-scroll-area-viewport] {
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+}
+
+[data-radix-scroll-area-root] {
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+}
+
+
+/* Ensure notification dropdown is scrollable on mobile */
+
+.notification-scroll-area {
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+}
+
+
+/* Mobile touch improvements */
+
+@media (max-width: 768px) {
+    [data-radix-scroll-area-viewport] {
+        touch-action: pan-y !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    .notification-content {
+        touch-action: pan-y !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}
