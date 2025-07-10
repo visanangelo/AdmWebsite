@@ -131,7 +131,7 @@ export function useNotifications() {
 
   /* ---------- Optional: global cleanup ---------- */
   // e.g. call closeNotificationsChannel() inside an AuthProvider sign‑out flow
-
+  //testing
   return {
     notifications,
     unreadCount,
