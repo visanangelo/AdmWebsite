@@ -163,7 +163,8 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
   // Modal content
   const modalContent = (
     <div className={cn(
-      "fixed inset-0 z-[1000] flex items-center justify-center",
+      "fixed inset-0 z-[1000]",
+      isMobile ? "flex flex-col" : "flex items-center justify-center",
       isOpen ? "pointer-events-auto" : "pointer-events-none"
     )}>
       {/* Backdrop */}
@@ -174,14 +175,13 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
         )}
         onClick={handleClose}
       />
-      {/* Centered Modal */}
+      {/* Modal */}
       <div
         ref={modalRef}
         className={cn(
-          // Make modal larger and more prominent on desktop
           "relative z-10 w-full",
-          isMobile
-            ? "max-w-md mx-auto"
+          isMobile 
+            ? "h-full flex flex-col" 
             : "max-w-2xl mx-auto",
           isOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 -translate-y-2",
           "transition-all duration-200 ease-out"
@@ -189,18 +189,18 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
         style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
       >
         <Card className={cn(
-          // Larger, more readable card on desktop
           "shadow-2xl border-2 border-primary/20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg",
           "transition-all duration-200",
-          isMobile ? "h-[90vh]" : "max-h-[90vh] p-6",
-          !isMobile && "rounded-2xl"
+          isMobile 
+            ? "h-full flex flex-col rounded-none border-0" 
+            : "max-h-[90vh] p-6 rounded-2xl"
         )}
         style={{ touchAction: isMobile ? 'pan-y' : 'auto' }}
         >
           {/* Header */}
           <CardHeader className={cn(
             "pb-4 border-b border-border/30 bg-gradient-to-r from-card/80 to-card/60",
-            !isMobile && "px-0"
+            isMobile ? "flex-shrink-0" : "px-0"
           )}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -264,13 +264,12 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
           </CardHeader>
           {/* Content */}
           <CardContent className={cn(
-            "p-0",
-            !isMobile && "px-0"
+            "p-0 flex-1",
+            isMobile ? "flex flex-col" : "px-0"
           )}>
             <div className={cn(
-              "transition-all duration-300",
-              isMobile ? "h-[calc(90vh-120px)]" : "h-[60vh]",
-              "overflow-y-auto"
+              "transition-all duration-300 flex-1",
+              isMobile ? "overflow-y-auto" : "h-[60vh] overflow-y-auto"
             )}
             style={{
               touchAction: 'pan-y',
