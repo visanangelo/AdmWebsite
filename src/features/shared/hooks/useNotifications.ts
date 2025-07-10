@@ -31,7 +31,7 @@ export interface Notification {
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
-  const [isConnected, setIsConnected] = useState<'connected' | 'disconnected'>('disconnected')
+  const [isConnected, setIsConnected] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected')
 
   /** Always derived from notifications array. */
   const unreadCount = useMemo(
