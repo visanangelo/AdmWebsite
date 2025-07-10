@@ -6,7 +6,6 @@ import { Bell, Check, Trash2, X, Loader2, Settings, ExternalLink, Eye } from 'lu
 import { Button } from './button'
 import { Badge } from './badge'
 import { Card, CardContent, CardHeader, CardTitle } from './card'
-import { ScrollArea } from './scroll-area'
 import { Separator } from './separator'
 import { useNotifications, type Notification } from '@/features/shared/hooks/useNotifications'
 import { cn } from '@/features/shared/lib/utils'
@@ -263,15 +262,20 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
             "p-0",
             !isMobile && "px-0"
           )}>
-            <ScrollArea className={cn(
-              "transition-all duration-300 notification-scroll-area",
-              isMobile ? "h-[calc(90vh-120px)] touch-pan-y" : "h-[60vh]",
-              "overflow-y-auto"
-            )}
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              overscrollBehavior: 'contain'
-            }}
+            <div 
+              className={cn(
+                "transition-all duration-300",
+                isMobile ? "h-[calc(90vh-120px)]" : "h-[60vh]",
+                "overflow-y-auto overflow-x-hidden",
+                "scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent",
+                "hover:scrollbar-thumb-gray-400"
+              )}
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgb(209 213 219) transparent'
+              }}
             >
               {loading ? (
                 <div className="flex items-center justify-center h-32">
@@ -291,13 +295,7 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
                   </p>
                 </div>
               ) : (
-                <div 
-                  className="space-y-2 p-4 touch-pan-y notification-content"
-                  style={{
-                    WebkitOverflowScrolling: 'touch',
-                    overscrollBehavior: 'contain'
-                  }}
-                >
+                <div className="space-y-2 p-4">
                   {notifications.map((notification, index) => (
                     <React.Fragment key={notification.id}>
                       <div
@@ -412,7 +410,7 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </CardContent>
           {/* Footer */}
           {notifications.length > 0 && (
