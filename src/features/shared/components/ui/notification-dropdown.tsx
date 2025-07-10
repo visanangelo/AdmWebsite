@@ -262,21 +262,11 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
             "p-0",
             !isMobile && "px-0"
           )}>
-            <div 
-              className={cn(
-                "transition-all duration-300",
-                isMobile ? "h-[calc(90vh-120px)]" : "h-[60vh]",
-                "overflow-y-auto overflow-x-hidden",
-                "scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent",
-                "hover:scrollbar-thumb-gray-400"
-              )}
-              style={{
-                WebkitOverflowScrolling: 'touch',
-                overscrollBehavior: 'contain',
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'rgb(209 213 219) transparent'
-              }}
-            >
+            <div className={cn(
+              "transition-all duration-300",
+              isMobile ? "h-[calc(90vh-120px)]" : "h-[60vh]",
+              "overflow-y-auto"
+            )}>
               {loading ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="flex items-center gap-3">
