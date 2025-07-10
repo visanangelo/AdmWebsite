@@ -163,27 +163,41 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
   // Modal content
   const modalContent = (
     <div className={cn(
-      "fixed inset-0 z-[1000]",
-      isMobile ? "flex flex-col" : "flex items-center justify-center",
+      isMobile 
+        ? "fixed inset-0 z-[1000] flex items-end" 
+        : "fixed inset-0 z-[1000] flex items-center justify-center",
       isOpen ? "pointer-events-auto" : "pointer-events-none"
     )}>
-      {/* Backdrop */}
-      <div 
-        className={cn(
-          "absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-200",
-          isOpen ? "opacity-100" : "opacity-0"
-        )}
-        onClick={handleClose}
-      />
-      {/* Modal */}
+      {/* Backdrop - only on desktop */}
+      {!isMobile && (
+        <div 
+          className={cn(
+            "absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-200",
+            isOpen ? "opacity-100" : "opacity-0"
+          )}
+          onClick={handleClose}
+        />
+      )}
+      {/* Mobile backdrop */}
+      {isMobile && (
+        <div 
+          className={cn(
+            "absolute inset-0 bg-black/50 transition-opacity duration-200",
+            isOpen ? "opacity-100" : "opacity-0"
+          )}
+          onClick={handleClose}
+        />
+      )}
+      {/* Modal/Sheet */}
       <div
         ref={modalRef}
         className={cn(
           "relative z-10 w-full",
           isMobile 
-            ? "h-full flex flex-col" 
+            ? "h-[90vh] flex flex-col transform transition-transform duration-300 ease-out" 
             : "max-w-2xl mx-auto",
-          isOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 -translate-y-2",
+          isMobile && (isOpen ? "translate-y-0" : "translate-y-full"),
+          !isMobile && (isOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 -translate-y-2"),
           "transition-all duration-200 ease-out"
         )}
         style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
@@ -192,7 +206,7 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
           "shadow-2xl border-2 border-primary/20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg",
           "transition-all duration-200",
           isMobile 
-            ? "h-full flex flex-col rounded-none border-0" 
+            ? "h-full flex flex-col rounded-t-3xl border-b-0" 
             : "max-h-[90vh] p-6 rounded-2xl"
         )}
         style={{ touchAction: isMobile ? 'pan-y' : 'auto' }}
