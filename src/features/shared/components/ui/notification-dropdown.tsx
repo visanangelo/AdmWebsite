@@ -52,14 +52,17 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside)
-      document.body.style.overflow = 'hidden'
+      // Don't set body overflow to hidden on mobile as it can interfere with scrolling
+      if (!isMobile) {
+        document.body.style.overflow = 'hidden'
+      }
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, handleClose])
+  }, [isOpen, handleClose, isMobile])
 
   // Handle escape key to close dropdown
   useEffect(() => {
@@ -191,7 +194,9 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
           "transition-all duration-200",
           isMobile ? "h-[90vh]" : "max-h-[90vh] p-6",
           !isMobile && "rounded-2xl"
-        )}>
+        )}
+        style={{ touchAction: isMobile ? 'pan-y' : 'auto' }}
+        >
           {/* Header */}
           <CardHeader className={cn(
             "pb-4 border-b border-border/30 bg-gradient-to-r from-card/80 to-card/60",
@@ -266,7 +271,12 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
               "transition-all duration-300",
               isMobile ? "h-[calc(90vh-120px)]" : "h-[60vh]",
               "overflow-y-auto"
-            )}>
+            )}
+            style={{
+              touchAction: 'pan-y',
+              WebkitOverflowScrolling: 'touch'
+            }}
+            >
               {loading ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="flex items-center gap-3">
