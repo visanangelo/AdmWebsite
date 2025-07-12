@@ -41,18 +41,18 @@ export function useNotifications() {
 
   /* ---------- Fetch initial list ---------- */
   const fetchNotifications = useCallback(async () => {
-    setLoading(true)
+      setLoading(true)
 
-    const { data, error } = await getSupabaseClient()
-      .from('notifications')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50)
+      const { data, error } = await getSupabaseClient()
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
 
     if (error) console.error('fetchNotifications error:', error)
     if (data) setNotifications(data as Notification[])
 
-    setLoading(false)
+      setLoading(false)
   }, [])
 
   /* ---------- Server mutations ---------- */
@@ -79,20 +79,20 @@ export function useNotifications() {
   )
 
   const markAllAsRead = useCallback(async () => {
-    const { error } = await getSupabaseClient()
-      .from('notifications')
-      .update({ read: true })
-      .eq('read', false)
+      const { error } = await getSupabaseClient()
+        .from('notifications')
+        .update({ read: true })
+        .eq('read', false)
 
     if (!error) setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
     else console.error('markAllAsRead error:', error)
   }, [])
 
   const deleteNotification = useCallback(async (id: string) => {
-    const { error } = await getSupabaseClient()
-      .from('notifications')
-      .delete()
-      .eq('id', id)
+      const { error } = await getSupabaseClient()
+        .from('notifications')
+        .delete()
+        .eq('id', id)
 
     if (!error)
       setNotifications((prev) => prev.filter((n) => n.id !== id))
@@ -108,19 +108,19 @@ export function useNotifications() {
     const unsubscribe = addNotificationsListener((payload) => {
       setNotifications((prev) => {
         let next = [...prev]
-        if (payload.eventType === 'INSERT') {
+              if (payload.eventType === 'INSERT') {
           next = [payload.new as Notification, ...next]
-        } else if (payload.eventType === 'UPDATE') {
+              } else if (payload.eventType === 'UPDATE') {
           next = next.map((n) =>
             n.id === (payload.new as Notification).id
               ? (payload.new as Notification)
               : n
-          )
-        } else if (payload.eventType === 'DELETE') {
+                )
+              } else if (payload.eventType === 'DELETE') {
           next = next.filter((n) => n.id !== (payload.old as Notification).id)
         }
         return next
-      })
+            })
     })
 
     // cleanup for this component only: remove its listener

@@ -1,29 +1,402 @@
 "use client"
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
-import { Bell, Check, Trash2, X, Loader2, Settings, ExternalLink, Eye } from 'lucide-react'
+import { Bell, Check, Trash2, Loader2, Eye, Filter } from 'lucide-react'
 import { Button } from './button'
 import { Badge } from './badge'
-import { Card, CardContent, CardHeader, CardTitle } from './card'
 import { Separator } from './separator'
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from './sheet'
+import { Popover, PopoverContent, PopoverTrigger } from './popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { useNotifications, type Notification } from '@/features/shared/hooks/useNotifications'
 import { cn } from '@/features/shared/lib/utils'
 import { useIsMobile } from '@/features/shared'
 
-interface NotificationDropdownProps {
-  onTabChange?: (tab: string) => void
+// CSS for smooth swipe interactions
+const swipeStyles = `
+  .swipe-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  .swipe-container::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+`
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style')
+  style.textContent = swipeStyles
+  document.head.appendChild(style)
 }
 
-export function NotificationDropdown({ onTabChange }: NotificationDropdownProps) {
+interface NotificationDropdownProps {
+  onTabChange?: (tab: string) => void
+  triggerRef?: React.RefObject<HTMLButtonElement>
+  setOpenMobile?: (open: boolean) => void
+  setHighlightedRequestId?: (id: string | null) => void
+}
+
+interface SwipeableNotificationProps {
+  notification: Notification
+  onClick: () => void
+  onView: (e: React.MouseEvent) => void
+  onDelete: (e: React.MouseEvent) => void
+  clickedNotificationId: string | null
+  formatTime: (dateString: string) => string
+}
+
+function SwipeableNotification({ 
+  notification, 
+  onClick, 
+  onView, 
+  onDelete, 
+  clickedNotificationId, 
+  formatTime 
+}: SwipeableNotificationProps) {
+  const [isSwiped, setIsSwiped] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobile()
+
+  // Reset swipe state when notification changes
+  useEffect(() => {
+    setIsSwiped(false)
+    if (containerRef.current) {
+      containerRef.current.scrollLeft = 0
+    }
+  }, [notification.id])
+
+  const actionWidth = 140; // Lățimea acțiunilor
+  const isTouching = useRef(false);
+
+  // Blocare absolută a scroll-ului la actionWidth
+  const limitScroll = () => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (container.scrollLeft > actionWidth) {
+      container.scrollLeft = actionWidth;
+    }
+    if (container.scrollLeft < 0) {
+      container.scrollLeft = 0;
+    }
+    if (isTouching.current) {
+      requestAnimationFrame(limitScroll);
+    }
+  };
+
+  const handleTouchStart = () => {
+    isTouching.current = true;
+    limitScroll();
+  };
+
+  const handleTouchEnd = () => {
+    isTouching.current = false;
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    const currentScrollLeft = container.scrollLeft;
+    const minSwipeDistance = 30;
+    // Snap logic
+    if (!isSwiped) {
+      // Swipe stânga (deschidere)
+      if (currentScrollLeft > minSwipeDistance) {
+        setIsSwiped(true);
+        container.scrollTo({ left: actionWidth, behavior: 'smooth' });
+      } else {
+        setIsSwiped(false);
+        container.scrollTo({ left: 0, behavior: 'smooth' });
+      }
+    } else {
+      // Swipe dreapta (închidere) - orice swipe dreapta duce la 0
+      setIsSwiped(false);
+      container.scrollTo({ left: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Adaugă limitare la scroll pe touch move
+  const handleTouchMove = () => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    // Limitează scroll-ul între 0 și actionWidth
+    container.scrollLeft = Math.max(0, Math.min(container.scrollLeft, actionWidth));
+  };
+
+  // Adaugă limitare la scroll și pe onScroll (pentru orice alt gest nativ)
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (container.scrollLeft > actionWidth) {
+      container.scrollLeft = actionWidth;
+    }
+    if (container.scrollLeft < 0) {
+      container.scrollLeft = 0;
+    }
+  };
+
+
+  
+  
+  
+  
+
+  const handleActionClick = (e: React.MouseEvent, action: 'view' | 'delete') => {
+    e.stopPropagation()
+    if (isMobile) {
+      setIsSwiped(false)
+      if (containerRef.current) {
+        containerRef.current.scrollTo({ left: 0, behavior: 'smooth' })
+      }
+    }
+    if (action === 'view') {
+      onView(e)
+    } else {
+      onDelete(e)
+    }
+  }
+
+  const handleCardClick = () => {
+    if (isMobile && isSwiped) {
+      setIsSwiped(false)
+      if (containerRef.current) {
+        containerRef.current.scrollTo({ left: 0, behavior: 'smooth' })
+      }
+      return
+    }
+    onClick()
+  }
+
+  // Desktop version - regular card with always-visible actions
+  if (!isMobile) {
+    return (
+      <div
+        className={cn(
+          "group relative p-4 rounded-xl cursor-pointer transition-all duration-200",
+          "hover:bg-muted/60 hover:shadow-sm",
+          "active:scale-[0.98]",
+          !notification.read && "bg-primary/5 border border-primary/20",
+          clickedNotificationId === notification.id && "bg-primary/10 border-primary/30"
+        )}
+        onClick={handleCardClick}
+      >
+        {!notification.read && (
+          <div className="absolute left-3 top-4 w-2 h-2 rounded-full bg-primary animate-pulse" />
+        )}
+        <div className="flex items-start gap-3 pl-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
+            <Bell className="h-5 w-5 text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h4 className={cn(
+                "text-sm font-semibold line-clamp-1",
+                !notification.read && "font-bold"
+              )}>
+                {notification.title}
+              </h4>
+              <div className="flex items-center gap-1">
+                {notification.data?.requestId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleActionClick(e, 'view')}
+                    className="h-7 w-7 p-0 rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-200"
+                    title="View request details"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => handleActionClick(e, 'delete')}
+                  className="h-7 w-7 p-0 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+                  title="Delete notification"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed">
+              {notification.message}
+            </p>
+            {notification.data && (
+              <div className="space-y-1 p-2 rounded-lg bg-muted/30 border border-border/30">
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Equipment:</span>
+                    <span className="font-medium truncate ml-2">
+                      {notification.data.equipmentName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Requester:</span>
+                    <span className="font-medium truncate ml-2">
+                      {notification.data.requesterName}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Period:</span>
+                  <span className="font-medium">
+                    {new Date(notification.data.startDate).toLocaleDateString()} - {new Date(notification.data.endDate).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-xs text-muted-foreground">
+                {formatTime(notification.created_at)}
+              </span>
+              {!notification.read && (
+                <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                  New
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mobile version - CSS scroll-snap swipeable card
+  return (
+    <div 
+      ref={containerRef}
+      className="swipe-container overflow-x-auto scrollbar-hide"
+      style={{
+        scrollSnapType: 'x mandatory',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        overscrollBehaviorX: 'none', // blochează complet bounce-ul la dreapta
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
+      onScroll={handleScroll}
+    >
+      <div className="flex">
+        {/* Main notification card */}
+        <div
+          className="swipe-element flex-shrink-0 w-full"
+          style={{ scrollSnapAlign: 'start' }}
+          onClick={handleCardClick}
+        >
+          <div
+            className={cn(
+              "relative bg-background cursor-pointer p-4 rounded-xl",
+              "hover:bg-muted/60 hover:shadow-sm",
+              "active:scale-[0.98]",
+              !notification.read && "bg-primary/5 border border-primary/20",
+              clickedNotificationId === notification.id && "bg-primary/10 border-primary/30"
+            )}
+          >
+            {!notification.read && (
+              <div className="absolute left-3 top-4 w-2 h-2 rounded-full bg-primary animate-pulse" />
+            )}
+            <div className="flex items-start gap-3 pl-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
+                <Bell className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h4 className={cn(
+                    "text-sm font-semibold line-clamp-1",
+                    !notification.read && "font-bold"
+                  )}>
+                    {notification.title}
+                  </h4>
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed">
+                  {notification.message}
+                </p>
+                {notification.data && (
+                  <div className="space-y-1 p-2 rounded-lg bg-muted/30 border border-border/30">
+                    <div className="grid grid-cols-1 gap-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Equipment:</span>
+                        <span className="font-medium truncate ml-2">
+                          {notification.data.equipmentName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Requester:</span>
+                        <span className="font-medium truncate ml-2">
+                          {notification.data.requesterName}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Period:</span>
+                      <span className="font-medium">
+                        {new Date(notification.data.startDate).toLocaleDateString()} - {new Date(notification.data.endDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-xs text-muted-foreground">
+                    {formatTime(notification.created_at)}
+                  </span>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>Swipe left for actions</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action buttons - wider and full height */}
+        <div 
+          className="action flex-shrink-0 flex"
+          style={{ 
+            minWidth: '140px', // Wider actions
+            width: '140px',
+            scrollSnapAlign: 'end'
+          }}
+        >
+          {notification.data?.requestId && (
+            <button
+              onClick={(e) => handleActionClick(e, 'view')}
+              className="flex-1 h-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 transition-all duration-200 p-0 m-0"
+              style={{ minWidth: '70px' }}
+              title="View request details"
+            >
+              <Eye className="h-7 w-7 text-white" />
+            </button>
+          )}
+          <button
+            onClick={(e) => handleActionClick(e, 'delete')}
+            className="flex-1 h-full flex items-center justify-center bg-red-600 hover:bg-red-700 text-white transition-all duration-200 p-0 m-0"
+            style={{ minWidth: '70px', background: '#dc2626' }}
+            title="Delete notification"
+          >
+            <Trash2 className="h-7 w-7 text-white" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function NotificationDropdown({ onTabChange, triggerRef: externalTriggerRef, setOpenMobile, setHighlightedRequestId }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isAnimating, setIsAnimating] = useState(false)
   const [clickedNotificationId, setClickedNotificationId] = useState<string | null>(null)
-  const modalRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const internalTriggerRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = externalTriggerRef || internalTriggerRef
   const isMobile = useIsMobile()
   const [mounted, setMounted] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const { 
     notifications, 
@@ -42,53 +415,11 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
     setClickedNotificationId(null)
   }, [])
 
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        handleClose()
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      // Don't set body overflow to hidden on mobile as it can interfere with scrolling
-      if (!isMobile) {
-        document.body.style.overflow = 'hidden'
-      }
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen, handleClose, isMobile])
-
-  // Handle escape key to close dropdown
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        handleClose()
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [isOpen, handleClose])
-
   const handleToggle = () => {
-    if (isAnimating) return
     if (isOpen) {
       handleClose()
     } else {
-      setIsAnimating(true)
       setIsOpen(true)
-      setTimeout(() => setIsAnimating(false), 50)
     }
   }
 
@@ -103,33 +434,49 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
   }
 
   const handleNotificationClick = async (notification: Notification) => {
-    if (clickedNotificationId === notification.id) return // Prevent double clicks
+    if (clickedNotificationId === notification.id) return
     
     setClickedNotificationId(notification.id)
     
     try {
-      // Mark as read if unread
       if (!notification.read) {
         await markAsRead(notification.id)
       }
 
-      // Navigate to rental requests tab with request ID in URL for highlighting
       handleClose()
+      
+      // Close mobile sidebar if open
+      if (setOpenMobile) {
+        setOpenMobile(false)
+      }
+      
       if (notification.data?.requestId) {
-        // Update URL with highlight parameter
-        const url = new URL(window.location.href)
-        url.searchParams.set('highlight', notification.data.requestId)
-        url.searchParams.set('tab', 'requests')
-        window.history.pushState({}, '', url.toString())
-        // Change tabs
+        // Set highlight and navigate to requests tab
+        setHighlightedRequestId?.(notification.data.requestId)
         onTabChange?.('requests')
+        
+        // Clear highlight after 5 seconds
+        setTimeout(() => {
+          setHighlightedRequestId?.(null)
+        }, 5000)
+        
+        // Scroll to the highlighted request
+        setTimeout(() => {
+          const highlightedRow = document.querySelector(`[data-row-id="${notification.data.requestId}"]`)
+          if (highlightedRow) {
+            highlightedRow.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            })
+          }
+        }, 1000)
       } else {
         onTabChange?.('requests')
       }
     } catch (error) {
       console.error('Error handling notification click:', error)
     } finally {
-      // Reset clicked state after a short delay
       setTimeout(() => setClickedNotificationId(null), 1000)
     }
   }
@@ -147,348 +494,286 @@ export function NotificationDropdown({ onTabChange }: NotificationDropdownProps)
     e.stopPropagation()
     
     handleClose()
+    
+    // Close mobile sidebar if open
+    if (setOpenMobile) {
+      setOpenMobile(false)
+    }
+    
     if (notification.data?.requestId) {
-      // Update URL with highlight parameter
-      const url = new URL(window.location.href)
-      url.searchParams.set('highlight', notification.data.requestId)
-      url.searchParams.set('tab', 'requests')
-      window.history.pushState({}, '', url.toString())
-      // Change tabs
+      // Set highlight and navigate to requests tab
+      setHighlightedRequestId?.(notification.data.requestId)
       onTabChange?.('requests')
+      
+      // Clear highlight after 5 seconds
+      setTimeout(() => {
+        setHighlightedRequestId?.(null)
+      }, 5000)
+      
+      // Scroll to the highlighted request
+      setTimeout(() => {
+        const highlightedRow = document.querySelector(`[data-row-id="${notification.data.requestId}"]`)
+        if (highlightedRow) {
+          highlightedRow.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          })
+        }
+      }, 1000)
     } else {
       onTabChange?.('requests')
     }
   }
 
-  // Modal content
-  const modalContent = (
-    <div className={cn(
-      isMobile 
-        ? "fixed inset-0 z-[1000] flex items-end" 
-        : "fixed inset-0 z-[1000] flex items-center justify-center",
-      isOpen ? "pointer-events-auto" : "pointer-events-none"
-    )}>
-      {/* Backdrop - only on desktop */}
-      {!isMobile && (
-        <div 
-          className={cn(
-            "absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-200",
-            isOpen ? "opacity-100" : "opacity-0"
-          )}
-          onClick={handleClose}
-        />
-      )}
-      {/* Mobile backdrop */}
-      {isMobile && (
-        <div 
-          className={cn(
-            "absolute inset-0 bg-black/50 transition-opacity duration-200",
-            isOpen ? "opacity-100" : "opacity-0"
-          )}
-          onClick={handleClose}
-        />
-      )}
-      {/* Modal/Sheet */}
-      <div
-        ref={modalRef}
-        className={cn(
-          "relative z-10 w-full",
-          isMobile 
-            ? "h-[90vh] flex flex-col transform transition-transform duration-300 ease-out" 
-            : "max-w-2xl mx-auto",
-          isMobile && (isOpen ? "translate-y-0" : "translate-y-full"),
-          !isMobile && (isOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 -translate-y-2"),
-          "transition-all duration-200 ease-out"
-        )}
-        style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
-      >
-        <Card className={cn(
-          "shadow-2xl border-2 border-primary/20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg",
-          "transition-all duration-200",
-          isMobile 
-            ? "h-full flex flex-col rounded-t-3xl border-b-0" 
-            : "max-h-[90vh] p-6 rounded-2xl"
-        )}
-        style={{ touchAction: isMobile ? 'pan-y' : 'auto' }}
-        >
+  const filteredNotifications = notifications.filter(notification => 
+    filter === 'all' || !notification.read
+  )
+
+  const getConnectionStatus = () => {
+    switch (isConnected) {
+      case 'connected':
+        return { icon: '🟢', text: 'Live', color: 'text-green-600' }
+      case 'connecting':
+        return { icon: '🟡', text: 'Connecting', color: 'text-yellow-600' }
+      case 'disconnected':
+        return { icon: '🔴', text: 'Offline', color: 'text-red-600' }
+      default:
+        return { icon: '⚪', text: 'Unknown', color: 'text-gray-600' }
+    }
+  }
+
+  const connectionStatus = getConnectionStatus()
+
+  if (!mounted) return null
+
+  // Mobile: Use Sheet component
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          <Button
+            ref={triggerRef}
+            variant="ghost"
+            size="sm"
+            className="relative h-10 w-10 rounded-full p-0 hover:bg-muted/50"
+            onClick={handleToggle}
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full p-0 text-xs font-bold flex items-center justify-center"
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Badge>
+            )}
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
           {/* Header */}
-          <CardHeader className={cn(
-            "pb-4 border-b border-border/30 bg-gradient-to-r from-card/80 to-card/60",
-            isMobile ? "flex-shrink-0" : "px-0"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <div className="flex-shrink-0 px-6 py-4 border-b">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
                   <Bell className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg font-bold tracking-tight">Notifications</CardTitle>
-                  <p className="text-sm text-muted-foreground font-medium">
+                  <SheetTitle className="text-lg font-bold">Notifications</SheetTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Action buttons row - better spacing */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted/50 text-xs">
+                <span>{connectionStatus.icon}</span>
+                <span className={connectionStatus.color}>{connectionStatus.text}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMarkAllAsRead}
+                    className="h-8 px-3 text-xs"
+                  >
+                    <Check className="h-3 w-3 mr-1" />
+                    Mark all read
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Filter */}
+          <div className="flex-shrink-0 px-6 py-3 border-b">
+            <Select value={filter} onValueChange={(value: 'all' | 'unread') => setFilter(value)}>
+              <SelectTrigger className="w-full">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter notifications" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All notifications</SelectItem>
+                <SelectItem value="unread">Unread only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Content - simplified structure for proper scrolling */}
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Loading...</span>
+                </div>
+              </div>
+            ) : filteredNotifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-center p-6">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                  <Bell className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-base mb-1">No notifications</h3>
+                <p className="text-sm text-muted-foreground">
+                  {filter === 'unread' ? 'No unread notifications' : 'You\'re all caught up!'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1 p-4">
+                {filteredNotifications.map((notification, index) => (
+                  <React.Fragment key={notification.id}>
+                    <SwipeableNotification
+                      notification={notification}
+                      onClick={() => handleNotificationClick(notification)}
+                      onView={(e) => handleViewRequest(e, notification)}
+                      onDelete={(e) => handleDeleteNotification(e, notification.id)}
+                      clickedNotificationId={clickedNotificationId}
+                      formatTime={formatTime}
+                    />
+                    {index < filteredNotifications.length - 1 && (
+                      <Separator className="mx-4" />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  // Desktop: Use Popover component
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          ref={triggerRef}
+          variant="ghost"
+          size="sm"
+          className="relative h-10 w-10 rounded-full p-0 hover:bg-muted/50"
+          onClick={handleToggle}
+        >
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full p-0 text-xs font-bold flex items-center justify-center"
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-96 p-0" align="end">
+        <div className="flex flex-col h-[500px]">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
+                  <Bell className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Notifications</h3>
+                  <p className="text-sm text-muted-foreground">
                     {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* Connection Status */}
                 <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-muted/50 text-xs">
-                  {isConnected === 'connected' && (
-                    <>
-                      <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-green-600">Live</span>
-                    </>
-                  )}
-                  {isConnected === 'connecting' && (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
-                      <span className="text-blue-600">Connecting</span>
-                    </>
-                  )}
-                  {isConnected === 'disconnected' && (
-                    <>
-                      <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                      <span className="text-red-600">Offline</span>
-                    </>
-                  )}
+                  <span>{connectionStatus.icon}</span>
+                  <span className={connectionStatus.color}>{connectionStatus.text}</span>
                 </div>
-                {/* Actions */}
-                <div className="flex items-center gap-1">
-                  {unreadCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleMarkAllAsRead}
-                      className="h-8 w-8 p-0 hover:bg-primary/10"
-                      title="Mark all as read"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  )}
+                {unreadCount > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleClose}
-                    className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-                    title="Close"
+                    onClick={handleMarkAllAsRead}
+                    className="h-8 w-8 p-0"
                   >
-                    <X className="h-4 w-4" />
+                    <Check className="h-4 w-4" />
                   </Button>
-                </div>
+                )}
               </div>
             </div>
-          </CardHeader>
-          {/* Content */}
-          <CardContent className={cn(
-            "p-0 flex-1",
-            isMobile ? "flex flex-col" : "px-0"
-          )}>
-            <div className={cn(
-              "transition-all duration-300 flex-1",
-              isMobile ? "overflow-y-auto" : "h-[60vh] overflow-y-auto"
-            )}
-            style={{
-              touchAction: 'pan-y',
-              WebkitOverflowScrolling: 'touch'
-            }}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-base text-muted-foreground font-medium">Loading notifications...</span>
-                  </div>
+            <Select value={filter} onValueChange={(value: 'all' | 'unread') => setFilter(value)}>
+              <SelectTrigger className="w-full">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter notifications" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All notifications</SelectItem>
+                <SelectItem value="unread">Unread only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Loading...</span>
                 </div>
-              ) : notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 text-center p-6">
-                  <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                    <Bell className="h-10 w-10 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-semibold text-lg text-foreground mb-1">No notifications</h3>
-                  <p className="text-base text-muted-foreground">
-                    You&apos;re all caught up! No new notifications.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2 p-4">
-                  {notifications.map((notification, index) => (
-                    <React.Fragment key={notification.id}>
-                      <div
-                        className={cn(
-                          "group relative p-5 rounded-2xl cursor-pointer transition-all duration-300",
-                          "hover:bg-muted/60 hover:shadow-lg hover:scale-[1.01]",
-                          "active:scale-[0.98]",
-                          !notification.read && "bg-primary/5 border border-primary/20 shadow-sm",
-                          clickedNotificationId === notification.id && "bg-primary/10 border-primary/30 shadow-md"
-                        )}
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        {/* Unread indicator */}
-                        {!notification.read && (
-                          <div className="absolute left-4 top-5 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                        )}
-                        <div className="flex items-start gap-4 pl-4">
-                          {/* Icon */}
-                          <div className={cn(
-                            "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center",
-                            "bg-gradient-to-br from-blue-500/20 to-purple-500/20",
-                            "border border-blue-500/30"
-                          )}>
-                            <Bell className="h-6 w-6 text-blue-600" />
-                          </div>
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <h4 className={cn(
-                                "text-base font-semibold line-clamp-1 text-foreground",
-                                !notification.read && "font-bold"
-                              )}>
-                                {notification.title}
-                              </h4>
-                              {/* Action buttons */}
-                              <div className="flex items-center gap-1">
-                                {notification.data?.requestId && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => handleViewRequest(e, notification)}
-                                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-                                    title="View request details"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => handleDeleteNotification(e, notification.id)}
-                                  className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-destructive/10 hover:text-destructive"
-                                  title="Delete notification"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
-                              {notification.message}
-                            </p>
-                            {/* Notification details */}
-                            {notification.data && (
-                              <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border/30">
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Equipment:</span>
-                                    <span className="font-medium text-foreground truncate ml-2">
-                                      {notification.data.equipmentName}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Requester:</span>
-                                    <span className="font-medium text-foreground truncate ml-2">
-                                      {notification.data.requesterName}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Rental Period:</span>
-                                  <span className="font-medium text-foreground">
-                                    {new Date(notification.data.startDate).toLocaleDateString()} - {new Date(notification.data.endDate).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                {/* Click hint */}
-                                <div className="flex items-center gap-2 pt-2 border-t border-border/30">
-                                  <ExternalLink className="h-3 w-3 text-primary" />
-                                  <span className="text-xs text-primary font-medium">
-                                    Click to view request details
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                            {/* Timestamp */}
-                            <div className="flex items-center justify-between mt-3">
-                              <span className="text-xs text-muted-foreground">
-                                {formatTime(notification.created_at)}
-                              </span>
-                              {!notification.read && (
-                                <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                                  New
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      {index < notifications.length - 1 && (
-                        <Separator className="mx-4 my-2" />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-4 border-t border-border/30 bg-gradient-to-r from-muted/30 to-transparent">
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>{notifications.length} notification{notifications.length !== 1 ? 's' : ''}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-3 text-sm hover:text-primary"
-                >
-                  <Settings className="h-4 w-4 mr-1" />
-                  Settings
-                </Button>
               </div>
-            </div>
-          )}
-        </Card>
-      </div>
-    </div>
-  )
-
-  return (
-    <>
-      {/* Trigger Button (sidebar/header) */}
-      <Button
-        ref={triggerRef}
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "relative h-10 w-10 rounded-xl transition-colors hover:bg-primary/10 active:bg-primary/20",
-          isOpen && "bg-primary/20 text-primary shadow-lg"
-        )}
-        onClick={handleToggle}
-      >
-        <Bell className={cn(
-          "h-5 w-5 transition-none",
-          isOpen && ""
-        )} />
-        {/* Unread Badge */}
-        {unreadCount > 0 && (
-          <Badge 
-            variant="destructive" 
-            className={cn(
-              "absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center shadow-lg shadow-red-500/30"
+            ) : filteredNotifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-center p-6">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                  <Bell className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-base mb-1">No notifications</h3>
+                <p className="text-sm text-muted-foreground">
+                  {filter === 'unread' ? 'No unread notifications' : 'You\'re all caught up!'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1 p-4">
+                {filteredNotifications.map((notification, index) => (
+                  <React.Fragment key={notification.id}>
+                    <SwipeableNotification
+                      notification={notification}
+                      onClick={() => handleNotificationClick(notification)}
+                      onView={(e) => handleViewRequest(e, notification)}
+                      onDelete={(e) => handleDeleteNotification(e, notification.id)}
+                      clickedNotificationId={clickedNotificationId}
+                      formatTime={formatTime}
+                    />
+                    {index < filteredNotifications.length - 1 && (
+                      <Separator className="mx-4" />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
             )}
-          >
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </Badge>
-        )}
-        {/* Connection Status Indicator */}
-        <div className="absolute -bottom-1 -right-1">
-          {isConnected === 'connected' && (
-            <div className="h-2 w-2 rounded-full bg-green-500 shadow-lg shadow-green-500/50" />
-          )}
-          {isConnected === 'connecting' && (
-            <Loader2 className="h-2 w-2 animate-spin text-blue-500" />
-          )}
-          {isConnected === 'disconnected' && (
-            <div className="h-2 w-2 rounded-full bg-red-500 shadow-lg shadow-red-500/50" />
-          )}
+          </div>
         </div>
-      </Button>
-      {/* Global Modal Portal */}
-      {mounted && isOpen && createPortal(modalContent, document.body)}
-    </>
+      </PopoverContent>
+    </Popover>
   )
 } 

@@ -15,6 +15,8 @@ import { Avatar, AvatarFallback } from "@/features/shared/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/features/shared/components/ui/dropdown-menu"
 import { useIsMobile, useAuth } from "@/features/shared"
 import { NotificationDropdown } from "@/features/shared/components/ui/notification-dropdown"
+import { useRef } from "react"
+import { useDashboard } from "@/features/dashboard/context/DashboardProvider"
 
 const navMain = [
   {
@@ -66,6 +68,8 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: { activeTab?: s
   const router = useRouter()
   const { signOut } = useAuth()
   const filteredNav = navMain;
+  const notificationTriggerRef = useRef<HTMLButtonElement>(null)
+  const { setHighlightedRequestId } = useDashboard()
 
   const handleTabClick = (item: typeof navMain[0]) => {
     if (item.external) {
@@ -79,6 +83,13 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: { activeTab?: s
     // Close mobile sidebar after tab click
     if (isMobile) {
       setOpenMobile(false);
+    }
+  }
+
+  const handleNotificationClick = () => {
+    // Trigger the notification dropdown directly
+    if (notificationTriggerRef.current) {
+      notificationTriggerRef.current.click()
     }
   }
 
@@ -166,10 +177,26 @@ export function AppSidebar({ activeTab, onTabChange, ...props }: { activeTab?: s
 
         <SidebarFooter className="border-t border-border flex-shrink-0 bg-gradient-to-t from-card/80 to-transparent overflow-hidden">
           <div className="p-4 space-y-3">
-            {/* Notifications */}
-            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+            {/* Notifications - Entire area clickable */}
+            <div 
+              className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={handleNotificationClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleNotificationClick()
+                }
+              }}
+            >
               <div className="flex items-center gap-2">
-                <NotificationDropdown onTabChange={onTabChange} />
+                <NotificationDropdown 
+                  onTabChange={onTabChange} 
+                  triggerRef={notificationTriggerRef} 
+                  setOpenMobile={setOpenMobile}
+                  setHighlightedRequestId={setHighlightedRequestId}
+                />
                 <span className="text-sm text-foreground">Notifications</span>
               </div>
             </div>

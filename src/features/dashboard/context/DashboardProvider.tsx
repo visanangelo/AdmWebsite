@@ -17,12 +17,14 @@ interface DashboardContextType {
   autoRefreshEnabled: boolean
   refreshInterval: number
   realtimeStatus: 'connected' | 'disconnected' | 'connecting'
+  highlightedRequestId: string | null
   fetchData: (isManualRefresh?: boolean) => Promise<void>
   debouncedFetch: (isManualRefresh?: boolean) => void
   setActionLoadingId: (id: string | null) => void
   setTab: (tab: string) => void
   setAutoRefreshEnabled: (enabled: boolean) => void
   setRefreshInterval: (interval: number) => void
+  setHighlightedRequestId: (id: string | null) => void
   setData: React.Dispatch<React.SetStateAction<{
     requests: RentalRequest[];
     fleet: FleetItem[];
@@ -61,6 +63,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(60000)
   const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting')
+  const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null)
 
   // Use the data fetching hook
   const { data, loading, error, lastFetch, fetchData, debouncedFetch, setData } = useDataFetching(setRealtimeStatus)
@@ -83,12 +86,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     autoRefreshEnabled,
     refreshInterval,
     realtimeStatus,
+    highlightedRequestId,
     fetchData,
     debouncedFetch,
     setActionLoadingId,
     setTab,
     setAutoRefreshEnabled,
     setRefreshInterval,
+    setHighlightedRequestId,
     setData,
     ...actions
   }), [
@@ -101,12 +106,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     autoRefreshEnabled,
     refreshInterval,
     realtimeStatus,
+    highlightedRequestId,
     fetchData,
     debouncedFetch,
     setActionLoadingId,
     setTab,
     setAutoRefreshEnabled,
     setRefreshInterval,
+    setHighlightedRequestId,
     setData,
     actions
   ])

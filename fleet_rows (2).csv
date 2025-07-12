@@ -1,0 +1,4 @@
+id,name,category,specs,status,year,image,location,created_at
+3a104366-a215-4d6b-987e-f9fd3d767b26,Excavator 2000,Crane,"100 ton, telescopic, 60m boom",Available,2021,https://images.unsplash.com/photo-1464983953574-0892a716854b,Timisoara,2025-06-18 17:11:42.622494+00
+73722179-9247-4f3b-b1bc-3444d7091dec,Pompa de beton,Concrete Pump,"42m reach, 160m³/h",Available,2023,https://images.unsplash.com/photo-1465101046530-73398c7f28ca,Constanta,2025-06-18 17:11:42.622494+00
+ebe2b6b3-7b11-4c0a-8b5d-b96a955cac26,Volvo Sparge Piatra,Dump Truck,"18m³, 8x4, diesel",Available,2020,https://images.unsplash.com/photo-1519125323398-675f0ddb6308,Cluj,2025-06-18 17:11:42.622494+00

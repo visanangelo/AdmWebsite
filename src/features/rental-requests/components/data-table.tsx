@@ -593,6 +593,7 @@ export function DataTable({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
+                      data-row-id={row.original.id}
                       className={`hover:bg-muted/50 transition-all duration-500 ${
                         isHighlighted 
                           ? 'animate-pulse bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-l-4 border-blue-500 shadow-lg' 
